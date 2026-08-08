@@ -39,6 +39,7 @@ function Login() {
       setLoading(true);
 
       const response = await loginUser(formData);
+      console.log("LOGIN RESPONSE:", response);
 
       // Use AuthContext instead of localStorage directly
       login(response.user, response.token);
