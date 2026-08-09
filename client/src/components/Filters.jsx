@@ -1,191 +1,165 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import RecipeList from "../components/RecipeList";
-import Filters from "../components/Filters";
-import { getRecipes } from "../services/recipe.service";
-
-function Recipes() {
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const courseFromURL = searchParams.get("course") || "All";
-  const subcategoryFromURL =
-    searchParams.get("subcategory") || "All";
-
-  const [showFilters, setShowFilters] = useState(false);
-
-  // Recipes fetched from MongoDB
-  const [recipes, setRecipes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const [filters, setFilters] = useState({
-    search: "",
-    diet: "All",
-    cuisine: "All",
-    taste: "All",
-    course: courseFromURL,
-    subcategory: subcategoryFromURL,
-  });
-
-  // Fetch recipes from MongoDB
-  useEffect(() => {
-    const fetchRecipes = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const data = await getRecipes();
-
-        if (data.success) {
-          setRecipes(data.recipes);
-        } else {
-          setError("Failed to load recipes.");
-        }
-      } catch (error) {
-        console.error("Failed to fetch recipes:", error);
-        setError("Unable to load recipes.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecipes();
-  }, []);
-
-  // Update filters when URL changes
-  useEffect(() => {
+function Filters({
+  filters,
+  setFilters,
+  showFilters,
+  setShowFilters,
+  clearFilters,
+}) {
+  const updateFilter = (key, value) => {
     setFilters((prev) => ({
       ...prev,
-      course: courseFromURL,
-      subcategory: subcategoryFromURL,
+      [key]: value,
     }));
-  }, [courseFromURL, subcategoryFromURL]);
-
-  // Clear filters
-  const clearFilters = () => {
-    setFilters({
-      search: "",
-      diet: "All",
-      cuisine: "All",
-      taste: "All",
-      course: "All",
-      subcategory: "All",
-    });
-
-    setSearchParams({});
   };
 
-  // Filter recipes
-  const filteredRecipes = recipes.filter((recipe) => {
-    return (
-      (filters.search === "" ||
-        recipe.name
-          .toLowerCase()
-          .includes(filters.search.toLowerCase())) &&
-      (filters.diet === "All" ||
-        recipe.diet === filters.diet) &&
-      (filters.cuisine === "All" ||
-        recipe.cuisine === filters.cuisine) &&
-      (filters.taste === "All" ||
-        recipe.taste === filters.taste) &&
-      (filters.course === "All" ||
-        recipe.course === filters.course) &&
-      (filters.subcategory === "All" ||
-        recipe.subcategory === filters.subcategory)
-    );
-  });
-
-  // Loading
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-orange-50 flex items-center justify-center">
-        <p className="text-xl font-semibold text-orange-500">
-          Loading recipes...
-        </p>
-      </main>
-    );
-  }
-
-  // Error
-  if (error) {
-    return (
-      <main className="min-h-screen bg-orange-50 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-          <p className="text-red-500 font-semibold">
-            {error}
-          </p>
-
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 bg-orange-500 text-white px-5 py-2 rounded-lg hover:bg-orange-600 transition"
-          >
-            Try Again
-          </button>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen bg-orange-50">
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="mb-8">
+      {/* Mobile Filter Button */}
+      <div className="flex justify-between items-center mb-4">
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="md:hidden bg-orange-500 text-white px-5 py-2 rounded-lg hover:bg-orange-600 transition"
+        >
+          {showFilters ? "Hide Filters" : "Show Filters"}
+        </button>
 
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-orange-500">
-            Explore Recipes
-          </h1>
+        <button
+          onClick={clearFilters}
+          className="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition"
+        >
+          Clear Filters
+        </button>
+      </div>
 
-          <p className="text-gray-600 mt-2">
-            Discover delicious recipes for every occasion.
-          </p>
-        </div>
+      {/* Filters */}
+      <div
+        className={`${
+          showFilters ? "block" : "hidden"
+        } md:block bg-white rounded-2xl shadow-md p-5`}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
 
-        <Filters
-          filters={filters}
-          setFilters={setFilters}
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
-          clearFilters={clearFilters}
-        />
+          {/* Search */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search
+            </label>
 
-        <div className="mb-5">
-          <p className="text-gray-600">
-            Showing{" "}
-            <span className="font-semibold">
-              {filteredRecipes.length}
-            </span>{" "}
-            {filteredRecipes.length === 1 ? "recipe" : "recipes"}
-          </p>
-        </div>
-
-        {filteredRecipes.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
-            <div className="text-6xl mb-4">
-              🍳
-            </div>
-
-            <h2 className="text-2xl font-bold text-gray-800">
-              No Recipes Found
-            </h2>
-
-            <p className="text-gray-500 mt-2">
-              Try changing or clearing your filters.
-            </p>
-
-            <button
-              onClick={clearFilters}
-              className="mt-6 bg-orange-500 text-white px-6 py-3 rounded-xl hover:bg-orange-600 transition"
-            >
-              Clear Filters
-            </button>
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) =>
+                updateFilter("search", e.target.value)
+              }
+              placeholder="Search recipes..."
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
           </div>
-        ) : (
-          <RecipeList recipes={filteredRecipes} />
-        )}
 
-      </section>
-    </main>
+          {/* Diet */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Diet
+            </label>
+
+            <select
+              value={filters.diet}
+              onChange={(e) =>
+                updateFilter("diet", e.target.value)
+              }
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            >
+              <option value="All">All</option>
+              <option value="Veg">Veg</option>
+              <option value="Non-Veg">Non-Veg</option>
+            </select>
+          </div>
+
+          {/* Cuisine */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cuisine
+            </label>
+
+            <select
+              value={filters.cuisine}
+              onChange={(e) =>
+                updateFilter("cuisine", e.target.value)
+              }
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            >
+              <option value="All">All</option>
+              <option value="Indian">Indian</option>
+              <option value="Chinese">Chinese</option>
+              <option value="Italian">Italian</option>
+              <option value="American">American</option>
+            </select>
+          </div>
+
+          {/* Taste */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Taste
+            </label>
+
+            <select
+              value={filters.taste}
+              onChange={(e) =>
+                updateFilter("taste", e.target.value)
+              }
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            >
+              <option value="All">All</option>
+              <option value="Sweet">Sweet</option>
+              <option value="Savoury">Savoury</option>
+            </select>
+          </div>
+
+          {/* Course */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Course
+            </label>
+
+            <select
+              value={filters.course}
+              onChange={(e) =>
+                updateFilter("course", e.target.value)
+              }
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            >
+              <option value="All">All</option>
+              <option value="Snacks">Snacks</option>
+              <option value="Starter">Starter</option>
+              <option value="Main Course">Main Course</option>
+              <option value="Dessert">Dessert</option>
+            </select>
+          </div>
+
+          {/* Subcategory */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Subcategory
+            </label>
+
+            <select
+              value={filters.subcategory}
+              onChange={(e) =>
+                updateFilter("subcategory", e.target.value)
+              }
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            >
+              <option value="All">All</option>
+              <option value="Curry">Curry</option>
+              <option value="Rice">Rice</option>
+              <option value="Pasta">Pasta</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+    </div>
   );
 }
 
-export default Recipes;
+export default Filters;
