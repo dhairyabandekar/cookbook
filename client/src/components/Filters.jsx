@@ -1,371 +1,191 @@
-import FilterButton from "./FilterButton";
-import { X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import RecipeList from "../components/RecipeList";
+import Filters from "../components/Filters";
+import { getRecipes } from "../services/recipe.service";
 
-function Filters({ filters, setFilters, showFilters, setShowFilters, clearFilters }) {
+function Recipes() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const courseFromURL = searchParams.get("course") || "All";
+  const subcategoryFromURL =
+    searchParams.get("subcategory") || "All";
+
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Recipes fetched from MongoDB
+  const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [filters, setFilters] = useState({
+    search: "",
+    diet: "All",
+    cuisine: "All",
+    taste: "All",
+    course: courseFromURL,
+    subcategory: subcategoryFromURL,
+  });
+
+  // Fetch recipes from MongoDB
+  useEffect(() => {
+    const fetchRecipes = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data = await getRecipes();
+
+        if (data.success) {
+          setRecipes(data.recipes);
+        } else {
+          setError("Failed to load recipes.");
+        }
+      } catch (error) {
+        console.error("Failed to fetch recipes:", error);
+        setError("Unable to load recipes.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecipes();
+  }, []);
+
+  // Update filters when URL changes
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      course: courseFromURL,
+      subcategory: subcategoryFromURL,
+    }));
+  }, [courseFromURL, subcategoryFromURL]);
+
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+      diet: "All",
+      cuisine: "All",
+      taste: "All",
+      course: "All",
+      subcategory: "All",
+    });
+
+    setSearchParams({});
+  };
+
+  // Filter recipes
+  const filteredRecipes = recipes.filter((recipe) => {
     return (
-        <div className="bg-white p-6 rounded-xl shadow-md mb-8">
+      (filters.search === "" ||
+        recipe.name
+          .toLowerCase()
+          .includes(filters.search.toLowerCase())) &&
+      (filters.diet === "All" ||
+        recipe.diet === filters.diet) &&
+      (filters.cuisine === "All" ||
+        recipe.cuisine === filters.cuisine) &&
+      (filters.taste === "All" ||
+        recipe.taste === filters.taste) &&
+      (filters.course === "All" ||
+        recipe.course === filters.course) &&
+      (filters.subcategory === "All" ||
+        recipe.subcategory === filters.subcategory)
+    );
+  });
 
-            <div className="flex items-center gap-3 mb-6">
+  // Loading
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-orange-50 flex items-center justify-center">
+        <p className="text-xl font-semibold text-orange-500">
+          Loading recipes...
+        </p>
+      </main>
+    );
+  }
 
-                {/* Search */}
-                <div className="relative flex-1">
-                    <input
-                        type="text"
-                        placeholder="🔍 Search recipes..."
-                        value={filters.search}
-                        onChange={(e) =>
-                            setFilters((prev) => ({
-                                ...prev,
-                                search: e.target.value,
-                            }))
-                        }
-                        className="w-full border rounded-lg p-3 pr-10 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    />
+  // Error
+  if (error) {
+    return (
+      <main className="min-h-screen bg-orange-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+          <p className="text-red-500 font-semibold">
+            {error}
+          </p>
 
-                    {filters.search && (
-                        <button
-                            onClick={() =>
-                                setFilters((prev) => ({
-                                    ...prev,
-                                    search: "",
-                                }))
-                            }
-                            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full hover:bg-gray-200 transition"
-                        >
-                            <X size={18} className="text-gray-500" />
-                        </button>
-                    )}
-                </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-orange-500 text-white px-5 py-2 rounded-lg hover:bg-orange-600 transition"
+          >
+            Try Again
+          </button>
+        </div>
+      </main>
+    );
+  }
 
-                {/* Filter Button */}
-                <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="bg-orange-500 text-white px-5 py-3 rounded-lg hover:bg-orange-600 transition whitespace-nowrap"
-                >
-                    {showFilters ? "Hide Filters ▲" : "Filters ▼"}
-                </button>
+  return (
+    <main className="min-h-screen bg-orange-50">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+        <div className="mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-orange-500">
+            Explore Recipes
+          </h1>
+
+          <p className="text-gray-600 mt-2">
+            Discover delicious recipes for every occasion.
+          </p>
+        </div>
+
+        <Filters
+          filters={filters}
+          setFilters={setFilters}
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
+          clearFilters={clearFilters}
+        />
+
+        <div className="mb-5">
+          <p className="text-gray-600">
+            Showing{" "}
+            <span className="font-semibold">
+              {filteredRecipes.length}
+            </span>{" "}
+            {filteredRecipes.length === 1 ? "recipe" : "recipes"}
+          </p>
+        </div>
+
+        {filteredRecipes.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
+            <div className="text-6xl mb-4">
+              🍳
             </div>
 
+            <h2 className="text-2xl font-bold text-gray-800">
+              No Recipes Found
+            </h2>
 
-            {showFilters && (
-                <>
-                    {/* Diet */}
+            <p className="text-gray-500 mt-2">
+              Try changing or clearing your filters.
+            </p>
 
-                    <div>
+            <button
+              onClick={clearFilters}
+              className="mt-6 bg-orange-500 text-white px-6 py-3 rounded-xl hover:bg-orange-600 transition"
+            >
+              Clear Filters
+            </button>
+          </div>
+        ) : (
+          <RecipeList recipes={filteredRecipes} />
+        )}
 
-                        <h3 className="font-semibold mb-3">
-                            Diet
-                        </h3>
-
-                        <div className="flex gap-3 flex-wrap">
-
-                            <FilterButton
-                                label="All"
-                                active={filters.diet === "All"}
-                                onClick={() =>
-                                    setFilters((prev) => ({
-                                        ...prev,
-                                        diet: "All",
-                                    }))
-                                }
-                            />
-
-                            <FilterButton
-                                label="Veg"
-                                active={filters.diet === "Veg"}
-                                onClick={() =>
-                                    setFilters((prev) => ({
-                                        ...prev,
-                                        diet: "Veg",
-                                    }))
-                                }
-                            />
-
-                            <FilterButton
-                                label="Non-Veg"
-                                active={filters.diet === "Non-Veg"}
-                                onClick={() =>
-                                    setFilters((prev) => ({
-                                        ...prev,
-                                        diet: "Non-Veg",
-                                    }))
-                                }
-                            />
-
-                        </div>
-
-                        {/*Cuisine*/}
-                        <div>
-                            <h3 className="font-semibold mb-3">
-                                Cuisine
-                            </h3>
-
-                            <div className="flex gap-3 flex-wrap">
-
-                                <FilterButton
-                                    label="All"
-                                    active={filters.cuisine === "All"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            cuisine: "All",
-                                        }))
-                                    }
-                                />
-                                <FilterButton
-                                    label="Indian"
-                                    active={filters.cuisine === "Indian"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            cuisine: "Indian",
-                                        }))
-                                    }
-                                />
-                                <FilterButton
-                                    label="Chinese"
-                                    active={filters.cuisine === "Chinese"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            cuisine: "Chinese",
-                                        }))
-                                    }
-                                />
-                                <FilterButton
-                                    label="Italian"
-                                    active={filters.cuisine === "Italian"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            cuisine: "Italian",
-                                        }))
-                                    }
-                                />
-                                <FilterButton
-                                    label="American"
-                                    active={filters.cuisine === "American"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            cuisine: "American",
-                                        }))
-                                    }
-                                />
-                            </div>
-                        </div>
-
-
-                        {/*Taste*/}
-
-                        <div>
-                            <h3 className="font-semibold mb-3">
-                                Taste
-                            </h3>
-                            <FilterButton
-                                label="All"
-                                active={filters.taste === "All"}
-                                onClick={() =>
-                                    setFilters((prev) => ({
-                                        ...prev,
-                                        taste: "All",
-                                    }))
-                                }
-                            />
-                            <FilterButton
-                                label="Sweet"
-                                active={filters.taste === "Sweet"}
-                                onClick={() =>
-                                    setFilters((prev) => ({
-                                        ...prev,
-                                        taste: "Sweet",
-                                    }))
-                                }
-                            />
-                            <FilterButton
-                                label="Savoury"
-                                active={filters.taste === "Savoury"}
-                                onClick={() =>
-                                    setFilters((prev) => ({
-                                        ...prev,
-                                        taste: "Savoury",
-                                    }))
-                                }
-                            />
-                        </div>
-
-                        {/*Course*/}
-
-                        <div>
-                            <h3 className="font-semibold mb-3">
-                                Course
-                            </h3>
-                            <FilterButton
-                                label="All"
-                                active={filters.course === "All"}
-                                onClick={() =>
-                                    setFilters((prev) => ({
-                                        ...prev,
-                                        course: "All",
-                                    }))
-                                }
-                            />
-                            <FilterButton
-                                label="Main Course"
-                                active={filters.course === "Main Course"}
-                                onClick={() =>
-                                    setFilters((prev) => ({
-                                        ...prev,
-                                        course: "Main Course",
-                                    }))
-                                }
-                            />
-                            <FilterButton
-                                label="Dessert"
-                                active={filters.course === "Dessert"}
-                                onClick={() =>
-                                    setFilters((prev) => ({
-                                        ...prev,
-                                        course: "Dessert",
-                                    }))
-                                }
-                            />
-                            <FilterButton
-                                label="Snacks"
-                                active={filters.course === "Snacks"}
-                                onClick={() =>
-                                    setFilters((prev) => ({
-                                        ...prev,
-                                        course: "Snacks",
-                                    }))
-                                }
-                            />
-                            <FilterButton
-                                label="Starter"
-                                active={filters.course === "Starter"}
-                                onClick={() =>
-                                    setFilters((prev) => ({
-                                        ...prev,
-                                        course: "Starter",
-                                    }))
-                                }
-                            />
-                        </div>
-                    </div>
-
-                    {/* Main Course Category */}
-
-                    {filters.course === "Main Course" && (
-                        <div>
-                            <h3 className="font-semibold mb-3">
-                                Main Course Category
-                            </h3>
-
-                            <div className="flex gap-3 flex-wrap">
-
-                                <FilterButton
-                                    label="All"
-                                    active={filters.subcategory === "All"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            subcategory: "All",
-                                        }))
-                                    }
-                                />
-
-                                <FilterButton
-                                    label="Rice"
-                                    active={filters.subcategory === "Rice"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            subcategory: "Rice",
-                                        }))
-                                    }
-                                />
-
-                                <FilterButton
-                                    label="Curry"
-                                    active={filters.subcategory === "Curry"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            subcategory: "Curry",
-                                        }))
-                                    }
-                                />
-
-                                <FilterButton
-                                    label="Dal"
-                                    active={filters.subcategory === "Dal"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            subcategory: "Dal",
-                                        }))
-                                    }
-                                />
-
-                                <FilterButton
-                                    label="Pasta"
-                                    active={filters.subcategory === "Pasta"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            subcategory: "Pasta",
-                                        }))
-                                    }
-                                />
-
-                                <FilterButton
-                                    label="Noodles"
-                                    active={filters.subcategory === "Noodles"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            subcategory: "Noodles",
-                                        }))
-                                    }
-                                />
-
-                                <FilterButton
-                                    label="Bread"
-                                    active={filters.subcategory === "Bread"}
-                                    onClick={() =>
-                                        setFilters((prev) => ({
-                                            ...prev,
-                                            subcategory: "Bread",
-                                        }))
-                                    }
-                                />
-
-                            </div>
-                        </div>
-                    )}
-
-                    {(filters.search ||
-                        filters.diet !== "All" ||
-                        filters.cuisine !== "All" ||
-                        filters.taste !== "All" ||
-                        filters.course !== "All" ||
-                        filters.subcategory !== "All") && (
-                            <div className="flex justify-end mt-6">
-                                <button
-                                    onClick={clearFilters}
-                                    className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg transition"
-                                >
-                                    Clear Filters
-                                </button>
-                            </div>
-                        )}
-
-                </>
-            )}
-
-        </div>
-    );
+      </section>
+    </main>
+  );
 }
 
-export default Filters;
+export default Recipes;
