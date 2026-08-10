@@ -9,3 +9,9 @@ export const getRecipeById = async (id) => {
   const response = await API.get(`/recipes/${id}`);
   return response.data;
 };
+
+// Add new recipe - Admin only
+export const createRecipe = async (recipeData) => {
+  const response = await API.post("/recipes", recipeData);
+  return response.data;
+};

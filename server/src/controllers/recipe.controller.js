@@ -22,7 +22,9 @@ const getRecipes = async (req, res) => {
 // Get single recipe
 const getRecipeById = async (req, res) => {
   try {
-    const recipe = await Recipe.findOne({ id: Number(req.params.id) });
+    const recipe = await Recipe.findOne({
+      id: Number(req.params.id),
+    });
 
     if (!recipe) {
       return res.status(404).json({
@@ -50,33 +52,31 @@ const createRecipe = async (req, res) => {
   try {
     const {
       name,
-      diet,
-      cuisine,
-      taste,
-      course,
+      category,
       subcategory,
-      time,
-      difficulty,
+      cuisine,
+      diet,
       image,
-      youtube,
+      url,
       description,
       ingredients,
-      steps,
+      process,
+      prepTime,
+      taste,
+      difficulty,
     } = req.body;
 
     // Required fields
     if (
       !name ||
-      !diet ||
+      !category ||
       !cuisine ||
-      !taste ||
-      !course ||
-      !time ||
-      !difficulty ||
+      !diet ||
       !image ||
       !description ||
       !ingredients ||
-      !steps
+      !process ||
+      prepTime === undefined
     ) {
       return res.status(400).json({
         success: false,
@@ -91,21 +91,44 @@ const createRecipe = async (req, res) => {
 
     const nextId = lastRecipe ? lastRecipe.id + 1 : 1;
 
+    // Create recipe
     const recipe = await Recipe.create({
       id: nextId,
+
       name,
+
       diet,
+
       cuisine,
-      taste,
-      course,
-      subcategory: subcategory || "",
-      time,
-      difficulty,
+
+      // Form category → database course
+      course: category,
+
+      subcategory:
+        category === "Main Course"
+          ? subcategory || ""
+          : "",
+
+      // Defaults until we add these fields to the form
+      taste: taste || "Savoury",
+
+      difficulty: difficulty || "Easy",
+
       image,
-      youtube: youtube || "",
+
+      // Form url → database youtube
+      youtube: url || "",
+
       description,
+
       ingredients,
-      steps,
+
+      // Form process → database steps
+      steps: process,
+
+      // Form prepTime → database time
+      time: Number(prepTime),
+
       addedBy: req.user.id,
     });
 
@@ -120,6 +143,7 @@ const createRecipe = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to add recipe",
+      error: error.message,
     });
   }
 };
