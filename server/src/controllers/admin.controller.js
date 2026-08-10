@@ -9,16 +9,17 @@ const getAdminStats = async (req, res) => {
     // Total recipes
     const totalRecipes = await Recipe.countDocuments();
 
-    // Recipes grouped by category
+    // Recipes grouped by course/category
     const categoryStats = await Recipe.aggregate([
       {
         $group: {
-          _id: "$category",
+          _id: "$course",
           count: { $sum: 1 },
         },
       },
     ]);
 
+    // Default category counts
     const recipesByCategory = {
       Snacks: 0,
       Starter: 0,
@@ -26,8 +27,9 @@ const getAdminStats = async (req, res) => {
       Dessert: 0,
     };
 
+    // Fill category counts
     categoryStats.forEach((item) => {
-      if (item._id) {
+      if (item._id && recipesByCategory[item._id] !== undefined) {
         recipesByCategory[item._id] = item.count;
       }
     });

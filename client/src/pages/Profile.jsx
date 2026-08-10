@@ -68,34 +68,35 @@ function Profile() {
   // Fetch Admin Stats
   // ==========================================
 
+  const fetchAdminStats = async () => {
+    try {
+      setLoadingStats(true);
+      setStatsError("");
+
+      const response = await API.get("/admin/stats");
+
+      if (response.data.success) {
+        setStats(response.data);
+      } else {
+        setStatsError("Failed to load admin statistics.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch admin stats:", error);
+
+      setStatsError(
+        error.response?.data?.message ||
+          "Unable to load admin statistics."
+      );
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  // Fetch stats when admin profile loads
   useEffect(() => {
     if (!isAdmin) {
       return;
     }
-
-    const fetchAdminStats = async () => {
-      try {
-        setLoadingStats(true);
-        setStatsError("");
-
-        const response = await API.get("/admin/stats");
-
-        if (response.data.success) {
-          setStats(response.data);
-        } else {
-          setStatsError("Failed to load admin statistics.");
-        }
-      } catch (error) {
-        console.error("Failed to fetch admin stats:", error);
-
-        setStatsError(
-          error.response?.data?.message ||
-            "Unable to load admin statistics."
-        );
-      } finally {
-        setLoadingStats(false);
-      }
-    };
 
     fetchAdminStats();
   }, [isAdmin]);
@@ -218,23 +219,11 @@ function Profile() {
           ]);
         }
 
-        // Update total recipe count
-        setStats((prev) =>
-          prev
-            ? {
-                ...prev,
-                totalRecipes:
-                  prev.totalRecipes + 1,
-                recipesByCategory: {
-                  ...prev.recipesByCategory,
-                  [data.recipe.course]:
-                    (prev.recipesByCategory?.[
-                      data.recipe.course
-                    ] || 0) + 1,
-                },
-              }
-            : prev
-        );
+        // ==========================================
+        // Refresh stats from backend
+        // ==========================================
+
+        await fetchAdminStats();
 
         // Clear form
         setRecipeForm({
@@ -306,40 +295,11 @@ function Profile() {
           )
         );
 
-        // Update total recipe count
-        setStats((prev) => {
-          if (!prev) {
-            return prev;
-          }
+        // ==========================================
+        // Refresh stats from backend
+        // ==========================================
 
-          const deletedRecipe =
-            adminRecipes.find(
-              (recipe) => recipe.id === id
-            );
-
-          const category =
-            deletedRecipe?.course;
-
-          return {
-            ...prev,
-            totalRecipes:
-              Math.max(
-                0,
-                prev.totalRecipes - 1
-              ),
-            recipesByCategory: category
-              ? {
-                  ...prev.recipesByCategory,
-                  [category]: Math.max(
-                    0,
-                    (prev.recipesByCategory?.[
-                      category
-                    ] || 0) - 1
-                  ),
-                }
-              : prev.recipesByCategory,
-          };
-        });
+        await fetchAdminStats();
 
         alert(
           "Recipe deleted successfully."
@@ -349,6 +309,16 @@ function Profile() {
       console.error(
         "Delete recipe error:",
         error
+      );
+
+      console.log(
+        "DELETE STATUS:",
+        error.response?.status
+      );
+
+      console.log(
+        "DELETE RESPONSE:",
+        error.response?.data
       );
 
       alert(
@@ -461,7 +431,9 @@ function Profile() {
 
               </div>
 
+              {/* ========================================== */}
               {/* Stats Loading */}
+              {/* ========================================== */}
 
               {loadingStats && (
                 <div className="bg-orange-50 rounded-xl p-6 text-center">
@@ -471,7 +443,9 @@ function Profile() {
                 </div>
               )}
 
+              {/* ========================================== */}
               {/* Stats Error */}
+              {/* ========================================== */}
 
               {!loadingStats && statsError && (
                 <div className="bg-red-50 text-red-600 rounded-xl p-5">
@@ -479,7 +453,9 @@ function Profile() {
                 </div>
               )}
 
+              {/* ========================================== */}
               {/* Stats */}
+              {/* ========================================== */}
 
               {!loadingStats &&
                 !statsError &&
@@ -535,7 +511,9 @@ function Profile() {
 
                     </div>
 
+                    {/* ========================================== */}
                     {/* Category Statistics */}
+                    {/* ========================================== */}
 
                     <div className="mt-6">
 
@@ -823,6 +801,7 @@ function Profile() {
                         required
                         className="w-full border border-gray-300 rounded-lg px-4 py-3"
                       >
+
                         <option value="">
                           Select Category
                         </option>
@@ -842,6 +821,7 @@ function Profile() {
                         <option value="Dessert">
                           Dessert
                         </option>
+
                       </select>
 
                     </div>
@@ -859,6 +839,7 @@ function Profile() {
                         required
                         className="w-full border border-gray-300 rounded-lg px-4 py-3"
                       >
+
                         <option value="">
                           Select Cuisine
                         </option>
@@ -878,6 +859,7 @@ function Profile() {
                         <option value="American">
                           American
                         </option>
+
                       </select>
 
                     </div>
@@ -1028,12 +1010,8 @@ function Profile() {
 
                     <textarea
                       name="ingredients"
-                      value={
-                        recipeForm.ingredients
-                      }
-                      onChange={
-                        handleRecipeChange
-                      }
+                      value={recipeForm.ingredients}
+                      onChange={handleRecipeChange}
                       rows="5"
                       placeholder={`Enter one ingredient per line
 250g Paneer
@@ -1056,9 +1034,7 @@ function Profile() {
                     <textarea
                       name="process"
                       value={recipeForm.process}
-                      onChange={
-                        handleRecipeChange
-                      }
+                      onChange={handleRecipeChange}
                       rows="6"
                       placeholder={`Enter one step per line
 Heat butter in a pan.
@@ -1083,12 +1059,8 @@ Serve hot.`}
                     <input
                       type="number"
                       name="prepTime"
-                      value={
-                        recipeForm.prepTime
-                      }
-                      onChange={
-                        handleRecipeChange
-                      }
+                      value={recipeForm.prepTime}
+                      onChange={handleRecipeChange}
                       min="1"
                       placeholder="40"
                       required
