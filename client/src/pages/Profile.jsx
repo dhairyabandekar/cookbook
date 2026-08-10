@@ -7,20 +7,29 @@ import {
   FaUtensils,
   FaPlus,
   FaTrash,
+  FaEdit,
 } from "react-icons/fa";
 
 import { AuthContext } from "../context/AuthContext";
 import { FavoritesContext } from "../context/FavoritesContext";
+
 import {
   createRecipe,
   deleteRecipe,
   getRecipes,
+  updateRecipe,
 } from "../services/recipe.service";
+
 import API from "../api/axios";
 
 function Profile() {
   const { user, logout } = useContext(AuthContext);
-  const { favorites } = useContext(FavoritesContext);
+
+  const {
+    favorites,
+    removeFavorite,
+  } = useContext(FavoritesContext);
+
   const navigate = useNavigate();
 
   const isAdmin = user?.role === "admin";
@@ -41,10 +50,12 @@ function Profile() {
   const [statsError, setStatsError] = useState("");
 
   // ==========================================
-  // Add Recipe
+  // Add / Edit Recipe
   // ==========================================
 
   const [showAddRecipe, setShowAddRecipe] = useState(false);
+
+  const [editingRecipeId, setEditingRecipeId] = useState(null);
 
   const [recipeForm, setRecipeForm] = useState({
     name: "",
@@ -78,10 +89,15 @@ function Profile() {
       if (response.data.success) {
         setStats(response.data);
       } else {
-        setStatsError("Failed to load admin statistics.");
+        setStatsError(
+          "Failed to load admin statistics."
+        );
       }
     } catch (error) {
-      console.error("Failed to fetch admin stats:", error);
+      console.error(
+        "Failed to fetch admin stats:",
+        error
+      );
 
       setStatsError(
         error.response?.data?.message ||
@@ -92,7 +108,10 @@ function Profile() {
     }
   };
 
-  // Fetch stats when admin profile loads
+  // ==========================================
+  // Fetch Stats When Admin Profile Loads
+  // ==========================================
+
   useEffect(() => {
     if (!isAdmin) {
       return;
@@ -102,7 +121,7 @@ function Profile() {
   }, [isAdmin]);
 
   // ==========================================
-  // Fetch Recipes for Admin
+  // Fetch Recipes For Admin
   // ==========================================
 
   useEffect(() => {
@@ -155,10 +174,84 @@ function Profile() {
   };
 
   // ==========================================
-  // Add Recipe
+  // Reset Recipe Form
   // ==========================================
 
-  const handleAddRecipe = async (e) => {
+  const resetRecipeForm = () => {
+    setRecipeForm({
+      name: "",
+      category: "",
+      subcategory: "",
+      cuisine: "",
+      diet: "",
+      image: "",
+      url: "",
+      description: "",
+      ingredients: "",
+      process: "",
+      prepTime: "",
+    });
+
+    setEditingRecipeId(null);
+    setRecipeMessage("");
+    setRecipeError("");
+  };
+
+  // ==========================================
+  // Open Add Recipe Form
+  // ==========================================
+
+  const handleOpenAddRecipe = () => {
+    resetRecipeForm();
+    setShowAddRecipe(true);
+  };
+
+  // ==========================================
+  // Open Edit Recipe Form
+  // ==========================================
+
+  const handleEditRecipe = (recipe) => {
+    setRecipeMessage("");
+    setRecipeError("");
+
+    setEditingRecipeId(recipe.id);
+
+    setRecipeForm({
+      name: recipe.name || "",
+
+      category: recipe.course || "",
+
+      subcategory: recipe.subcategory || "",
+
+      cuisine: recipe.cuisine || "",
+
+      diet: recipe.diet || "",
+
+      image: recipe.image || "",
+
+      url: recipe.youtube || "",
+
+      description: recipe.description || "",
+
+      ingredients: Array.isArray(recipe.ingredients)
+        ? recipe.ingredients.join("\n")
+        : "",
+
+      process: Array.isArray(recipe.steps)
+        ? recipe.steps.join("\n")
+        : "",
+
+      prepTime: recipe.time || "",
+    });
+
+    setShowAddRecipe(true);
+  };
+
+  // ==========================================
+  // Add / Update Recipe
+  // ==========================================
+
+  const handleRecipeSubmit = async (e) => {
     e.preventDefault();
 
     try {
@@ -204,6 +297,51 @@ function Profile() {
         recipeData
       );
 
+      // ==========================================
+      // UPDATE EXISTING RECIPE
+      // ==========================================
+
+      if (editingRecipeId !== null) {
+        const data = await updateRecipe(
+          editingRecipeId,
+          recipeData
+        );
+
+        if (data.success) {
+          setRecipeMessage(
+            "Recipe updated successfully! 🎉"
+          );
+
+          if (data.recipe) {
+            setAdminRecipes((prev) =>
+              prev.map((recipe) =>
+                recipe.id === editingRecipeId
+                  ? data.recipe
+                  : recipe
+              )
+            );
+          }
+
+          await fetchAdminStats();
+
+          setTimeout(() => {
+            setShowAddRecipe(false);
+            resetRecipeForm();
+          }, 1200);
+        } else {
+          setRecipeError(
+            data.message ||
+              "Failed to update recipe."
+          );
+        }
+
+        return;
+      }
+
+      // ==========================================
+      // ADD NEW RECIPE
+      // ==========================================
+
       const data = await createRecipe(recipeData);
 
       if (data.success) {
@@ -211,7 +349,6 @@ function Profile() {
           "Recipe added successfully! 🎉"
         );
 
-        // Add newly created recipe to admin list
         if (data.recipe) {
           setAdminRecipes((prev) => [
             data.recipe,
@@ -219,28 +356,10 @@ function Profile() {
           ]);
         }
 
-        // ==========================================
-        // Refresh stats from backend
-        // ==========================================
-
         await fetchAdminStats();
 
-        // Clear form
-        setRecipeForm({
-          name: "",
-          category: "",
-          subcategory: "",
-          cuisine: "",
-          diet: "",
-          image: "",
-          url: "",
-          description: "",
-          ingredients: "",
-          process: "",
-          prepTime: "",
-        });
+        resetRecipeForm();
 
-        // Close popup after successful submission
         setTimeout(() => {
           setShowAddRecipe(false);
           setRecipeMessage("");
@@ -253,7 +372,9 @@ function Profile() {
       }
     } catch (error) {
       console.error(
-        "Add recipe error:",
+        editingRecipeId !== null
+          ? "Update recipe error:"
+          : "Add recipe error:",
         error
       );
 
@@ -264,7 +385,9 @@ function Profile() {
 
       setRecipeError(
         error.response?.data?.message ||
-          "Unable to add recipe."
+          (editingRecipeId !== null
+            ? "Unable to update recipe."
+            : "Unable to add recipe.")
       );
     } finally {
       setAddingRecipe(false);
@@ -288,17 +411,18 @@ function Profile() {
       const data = await deleteRecipe(id);
 
       if (data.success) {
-        // Remove recipe from UI
+        // Remove recipe from admin UI
         setAdminRecipes((prev) =>
           prev.filter(
-            (recipe) => recipe.id !== id
+            (recipe) =>
+              String(recipe.id) !== String(id)
           )
         );
 
-        // ==========================================
-        // Refresh stats from backend
-        // ==========================================
+        // Remove deleted recipe from favourites
+        removeFavorite(id);
 
+        // Refresh admin statistics
         await fetchAdminStats();
 
         alert(
@@ -334,17 +458,13 @@ function Profile() {
 
         <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-8 lg:p-10">
 
-          {/* ========================================== */}
           {/* Heading */}
-          {/* ========================================== */}
 
           <h1 className="text-3xl sm:text-4xl font-bold text-orange-500 mb-8">
             My Profile
           </h1>
 
-          {/* ========================================== */}
           {/* Profile Header */}
-          {/* ========================================== */}
 
           <div className="flex flex-col sm:flex-row items-center gap-6 border-b pb-8">
 
@@ -363,6 +483,7 @@ function Profile() {
               </p>
 
               <div className="mt-3">
+
                 <span
                   className={`inline-block px-4 py-1.5 rounded-full text-sm font-semibold ${
                     isAdmin
@@ -372,21 +493,21 @@ function Profile() {
                 >
                   {isAdmin ? "Admin" : "User"}
                 </span>
+
               </div>
 
             </div>
 
           </div>
 
-          {/* ========================================== */}
           {/* Favourite Recipes */}
-          {/* ========================================== */}
 
           <div className="mt-8 bg-orange-100 rounded-xl p-5">
 
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
 
               <div>
+
                 <h3 className="text-xl sm:text-2xl font-semibold text-gray-800">
                   Favourite Recipes
                 </h3>
@@ -394,6 +515,7 @@ function Profile() {
                 <p className="text-gray-600 text-sm sm:text-base mt-1">
                   Recipes you've saved
                 </p>
+
               </div>
 
               <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -410,9 +532,7 @@ function Profile() {
 
           </div>
 
-          {/* ========================================== */}
           {/* ADMIN SECTION */}
-          {/* ========================================== */}
 
           {isAdmin && (
             <div className="mt-10 border-t pt-8">
@@ -420,6 +540,7 @@ function Profile() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
 
                 <div>
+
                   <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
                     Admin Dashboard
                   </h2>
@@ -427,25 +548,24 @@ function Profile() {
                   <p className="text-gray-500 mt-1">
                     Manage your Cook Book application
                   </p>
+
                 </div>
 
               </div>
 
-              {/* ========================================== */}
               {/* Stats Loading */}
-              {/* ========================================== */}
 
               {loadingStats && (
                 <div className="bg-orange-50 rounded-xl p-6 text-center">
+
                   <p className="text-orange-500 font-semibold">
                     Loading admin statistics...
                   </p>
+
                 </div>
               )}
 
-              {/* ========================================== */}
               {/* Stats Error */}
-              {/* ========================================== */}
 
               {!loadingStats && statsError && (
                 <div className="bg-red-50 text-red-600 rounded-xl p-5">
@@ -453,16 +573,12 @@ function Profile() {
                 </div>
               )}
 
-              {/* ========================================== */}
               {/* Stats */}
-              {/* ========================================== */}
 
               {!loadingStats &&
                 !statsError &&
                 stats && (
                   <>
-                    {/* Main Stats */}
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
                       {/* Users */}
@@ -472,6 +588,7 @@ function Profile() {
                         <div className="flex items-center justify-between">
 
                           <div>
+
                             <p className="text-gray-600 font-medium">
                               Registered Users
                             </p>
@@ -479,6 +596,7 @@ function Profile() {
                             <p className="text-4xl font-bold text-gray-800 mt-2">
                               {stats.totalUsers}
                             </p>
+
                           </div>
 
                           <FaUsers className="text-4xl text-blue-500" />
@@ -494,6 +612,7 @@ function Profile() {
                         <div className="flex items-center justify-between">
 
                           <div>
+
                             <p className="text-gray-600 font-medium">
                               Total Recipes
                             </p>
@@ -501,6 +620,7 @@ function Profile() {
                             <p className="text-4xl font-bold text-gray-800 mt-2">
                               {stats.totalRecipes}
                             </p>
+
                           </div>
 
                           <FaUtensils className="text-4xl text-green-500" />
@@ -511,9 +631,7 @@ function Profile() {
 
                     </div>
 
-                    {/* ========================================== */}
                     {/* Category Statistics */}
-                    {/* ========================================== */}
 
                     <div className="mt-6">
 
@@ -587,9 +705,7 @@ function Profile() {
                   </>
                 )}
 
-              {/* ========================================== */}
               {/* Manage Recipes */}
-              {/* ========================================== */}
 
               <div className="mt-8">
 
@@ -599,15 +715,19 @@ function Profile() {
 
                 {loadingRecipes ? (
                   <div className="bg-gray-50 rounded-xl p-6 text-center">
+
                     <p className="text-gray-500">
                       Loading recipes...
                     </p>
+
                   </div>
                 ) : adminRecipes.length === 0 ? (
                   <div className="bg-gray-50 rounded-xl p-6 text-center">
+
                     <p className="text-gray-500">
                       No recipes available.
                     </p>
+
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -647,6 +767,20 @@ function Profile() {
 
                         <div className="flex gap-2 shrink-0">
 
+                          {/* Edit */}
+
+                          <button
+                            onClick={() =>
+                              handleEditRecipe(recipe)
+                            }
+                            className="flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
+                          >
+                            <FaEdit />
+                            Edit
+                          </button>
+
+                          {/* Delete */}
+
                           <button
                             onClick={() =>
                               handleDeleteRecipe(
@@ -673,9 +807,7 @@ function Profile() {
             </div>
           )}
 
-          {/* ========================================== */}
           {/* Buttons */}
-          {/* ========================================== */}
 
           <div className="mt-8 flex flex-col md:flex-row gap-4">
 
@@ -683,9 +815,7 @@ function Profile() {
 
             {isAdmin && (
               <button
-                onClick={() =>
-                  setShowAddRecipe(true)
-                }
+                onClick={handleOpenAddRecipe}
                 className="flex-1 flex items-center justify-center gap-2 bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
               >
                 <FaPlus />
@@ -713,9 +843,7 @@ function Profile() {
 
           </div>
 
-          {/* ========================================== */}
-          {/* Add Recipe Popup */}
-          {/* ========================================== */}
+          {/* Add / Edit Recipe Popup */}
 
           {showAddRecipe && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
@@ -727,13 +855,17 @@ function Profile() {
                 <div className="flex items-center justify-between mb-6">
 
                   <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
-                    Add New Recipe
+                    {editingRecipeId !== null
+                      ? "Edit Recipe"
+                      : "Add New Recipe"}
                   </h2>
 
                   <button
-                    onClick={() =>
-                      setShowAddRecipe(false)
-                    }
+                    type="button"
+                    onClick={() => {
+                      setShowAddRecipe(false);
+                      resetRecipeForm();
+                    }}
                     className="text-gray-500 hover:text-gray-800 text-2xl"
                   >
                     ×
@@ -760,7 +892,7 @@ function Profile() {
                 {/* Form */}
 
                 <form
-                  onSubmit={handleAddRecipe}
+                  onSubmit={handleRecipeSubmit}
                   className="space-y-5"
                 >
 
@@ -1075,9 +1207,10 @@ Serve hot.`}
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowAddRecipe(false)
-                      }
+                      onClick={() => {
+                        setShowAddRecipe(false);
+                        resetRecipeForm();
+                      }}
                       className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition"
                     >
                       Cancel
@@ -1089,7 +1222,11 @@ Serve hot.`}
                       className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition disabled:opacity-60"
                     >
                       {addingRecipe
-                        ? "Adding Recipe..."
+                        ? editingRecipeId !== null
+                          ? "Updating Recipe..."
+                          : "Adding Recipe..."
+                        : editingRecipeId !== null
+                        ? "Update Recipe"
                         : "Add Recipe"}
                     </button>
 

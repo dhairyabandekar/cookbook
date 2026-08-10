@@ -9,6 +9,10 @@ export const FavoritesContext = createContext();
 export const FavoritesProvider = ({ children }) => {
   const [favorites, setFavorites] = useState([]);
 
+  // ==========================================
+  // Load Favorites
+  // ==========================================
+
   const loadFavorites = async () => {
     const token = localStorage.getItem("token");
 
@@ -21,31 +25,64 @@ export const FavoritesProvider = ({ children }) => {
       const data = await getFavorites();
 
       if (data.success) {
-        setFavorites(data.favorites);
+        setFavorites(data.favorites || []);
       }
     } catch (error) {
-      console.error("Failed to load favorites:", error);
+      console.error(
+        "Failed to load favorites:",
+        error
+      );
     }
   };
+
+  // ==========================================
+  // Load favorites on app start
+  // ==========================================
 
   useEffect(() => {
     loadFavorites();
   }, []);
 
+  // ==========================================
+  // Check Favorite
+  // ==========================================
+
   const isFavorite = (recipeId) => {
-    return favorites.includes(recipeId);
+    return favorites.some(
+      (id) => String(id) === String(recipeId)
+    );
   };
+
+  // ==========================================
+  // Toggle Favorite
+  // ==========================================
 
   const toggleFavorite = async (recipeId) => {
     try {
       const data = await toggleFavoriteAPI(recipeId);
 
       if (data.success) {
-        setFavorites(data.favorites);
+        setFavorites(data.favorites || []);
       }
     } catch (error) {
-      console.error("Failed to update favorite:", error);
+      console.error(
+        "Failed to update favorite:",
+        error
+      );
     }
+  };
+
+  // ==========================================
+  // Remove Favorite
+  // Used when admin deletes a recipe
+  // ==========================================
+
+  const removeFavorite = (recipeId) => {
+    setFavorites((prev) =>
+      prev.filter(
+        (id) => String(id) !== String(recipeId)
+      )
+    );
   };
 
   return (
@@ -54,6 +91,7 @@ export const FavoritesProvider = ({ children }) => {
         favorites,
         isFavorite,
         toggleFavorite,
+        removeFavorite,
         loadFavorites,
       }}
     >

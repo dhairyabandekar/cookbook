@@ -14,29 +14,37 @@ function Filters({
 
   return (
     <div className="mb-8">
-      {/* Mobile Filter Button */}
-      <div className="flex justify-between items-center mb-4">
+
+      {/* Filter Controls */}
+      <div className="flex flex-wrap gap-3 mb-4">
+
+        {/* Show / Hide Filters */}
         <button
+          type="button"
           onClick={() => setShowFilters(!showFilters)}
-          className="md:hidden bg-orange-500 text-white px-5 py-2 rounded-lg hover:bg-orange-600 transition"
+          className="bg-orange-500 text-white px-5 py-2 rounded-lg hover:bg-orange-600 transition"
         >
           {showFilters ? "Hide Filters" : "Show Filters"}
         </button>
 
+        {/* Clear Filters */}
         <button
+          type="button"
           onClick={clearFilters}
           className="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition"
         >
           Clear Filters
         </button>
+
       </div>
 
       {/* Filters */}
       <div
         className={`${
           showFilters ? "block" : "hidden"
-        } md:block bg-white rounded-2xl shadow-md p-5`}
+        } bg-white rounded-2xl shadow-md p-5`}
       >
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
 
           {/* Search */}
@@ -145,7 +153,10 @@ function Filters({
             <select
               value={filters.subcategory}
               onChange={(e) =>
-                updateFilter("subcategory", e.target.value)
+                updateFilter(
+                  "subcategory",
+                  e.target.value
+                )
               }
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             >
