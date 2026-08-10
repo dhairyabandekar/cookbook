@@ -1,10 +1,21 @@
 import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaUserCircle, FaHeart, FaUsers, FaUtensils, FaPlus } from "react-icons/fa";
+import {
+  FaUserCircle,
+  FaHeart,
+  FaUsers,
+  FaUtensils,
+  FaPlus,
+  FaTrash,
+} from "react-icons/fa";
 
 import { AuthContext } from "../context/AuthContext";
 import { FavoritesContext } from "../context/FavoritesContext";
-import { createRecipe } from "../services/recipe.service";
+import {
+  createRecipe,
+  deleteRecipe,
+  getRecipes,
+} from "../services/recipe.service";
 import API from "../api/axios";
 
 function Profile() {
@@ -12,11 +23,29 @@ function Profile() {
   const { favorites } = useContext(FavoritesContext);
   const navigate = useNavigate();
 
+  const isAdmin = user?.role === "admin";
+
+  // ==========================================
+  // Admin Recipes
+  // ==========================================
+
+  const [adminRecipes, setAdminRecipes] = useState([]);
+  const [loadingRecipes, setLoadingRecipes] = useState(false);
+
+  // ==========================================
+  // Admin Stats
+  // ==========================================
+
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [statsError, setStatsError] = useState("");
 
+  // ==========================================
+  // Add Recipe
+  // ==========================================
+
   const [showAddRecipe, setShowAddRecipe] = useState(false);
+
   const [recipeForm, setRecipeForm] = useState({
     name: "",
     category: "",
@@ -35,9 +64,9 @@ function Profile() {
   const [recipeError, setRecipeError] = useState("");
   const [addingRecipe, setAddingRecipe] = useState(false);
 
-  const isAdmin = user?.role === "admin";
-
-  // Fetch admin statistics
+  // ==========================================
+  // Fetch Admin Stats
+  // ==========================================
 
   useEffect(() => {
     if (!isAdmin) {
@@ -61,7 +90,7 @@ function Profile() {
 
         setStatsError(
           error.response?.data?.message ||
-          "Unable to load admin statistics."
+            "Unable to load admin statistics."
         );
       } finally {
         setLoadingStats(false);
@@ -71,10 +100,49 @@ function Profile() {
     fetchAdminStats();
   }, [isAdmin]);
 
+  // ==========================================
+  // Fetch Recipes for Admin
+  // ==========================================
+
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    const fetchAdminRecipes = async () => {
+      try {
+        setLoadingRecipes(true);
+
+        const data = await getRecipes();
+
+        if (data.success) {
+          setAdminRecipes(data.recipes);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to fetch admin recipes:",
+          error
+        );
+      } finally {
+        setLoadingRecipes(false);
+      }
+    };
+
+    fetchAdminRecipes();
+  }, [isAdmin]);
+
+  // ==========================================
+  // Logout
+  // ==========================================
+
   const handleLogout = () => {
     logout();
     navigate("/");
   };
+
+  // ==========================================
+  // Recipe Form Change
+  // ==========================================
 
   const handleRecipeChange = (e) => {
     const { name, value } = e.target;
@@ -84,6 +152,10 @@ function Profile() {
       [name]: value,
     }));
   };
+
+  // ==========================================
+  // Add Recipe
+  // ==========================================
 
   const handleAddRecipe = async (e) => {
     e.preventDefault();
@@ -95,18 +167,24 @@ function Profile() {
 
       const recipeData = {
         name: recipeForm.name,
+
         category: recipeForm.category,
+
         subcategory:
           recipeForm.category === "Main Course"
             ? recipeForm.subcategory
             : "All",
+
         cuisine: recipeForm.cuisine,
+
         diet: recipeForm.diet,
+
         image: recipeForm.image,
+
         url: recipeForm.url,
+
         description: recipeForm.description,
 
-        // Convert lines into arrays
         ingredients: recipeForm.ingredients
           .split("\n")
           .map((item) => item.trim())
@@ -120,11 +198,43 @@ function Profile() {
         prepTime: Number(recipeForm.prepTime),
       };
 
-      console.log("RECIPE DATA BEING SENT:", recipeData);
+      console.log(
+        "RECIPE DATA BEING SENT:",
+        recipeData
+      );
+
       const data = await createRecipe(recipeData);
 
       if (data.success) {
-        setRecipeMessage("Recipe added successfully! 🎉");
+        setRecipeMessage(
+          "Recipe added successfully! 🎉"
+        );
+
+        // Add newly created recipe to admin list
+        if (data.recipe) {
+          setAdminRecipes((prev) => [
+            data.recipe,
+            ...prev,
+          ]);
+        }
+
+        // Update total recipe count
+        setStats((prev) =>
+          prev
+            ? {
+                ...prev,
+                totalRecipes:
+                  prev.totalRecipes + 1,
+                recipesByCategory: {
+                  ...prev.recipesByCategory,
+                  [data.recipe.course]:
+                    (prev.recipesByCategory?.[
+                      data.recipe.course
+                    ] || 0) + 1,
+                },
+              }
+            : prev
+        );
 
         // Clear form
         setRecipeForm({
@@ -148,18 +258,103 @@ function Profile() {
         }, 1200);
       } else {
         setRecipeError(
-          data.message || "Failed to add recipe."
+          data.message ||
+            "Failed to add recipe."
         );
       }
     } catch (error) {
-      console.error("Add recipe error:", error);
-      console.log("BACKEND RESPONSE:", error.response?.data);
+      console.error(
+        "Add recipe error:",
+        error
+      );
+
+      console.log(
+        "BACKEND RESPONSE:",
+        error.response?.data
+      );
+
       setRecipeError(
         error.response?.data?.message ||
-        "Unable to add recipe."
+          "Unable to add recipe."
       );
     } finally {
       setAddingRecipe(false);
+    }
+  };
+
+  // ==========================================
+  // Delete Recipe
+  // ==========================================
+
+  const handleDeleteRecipe = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this recipe?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const data = await deleteRecipe(id);
+
+      if (data.success) {
+        // Remove recipe from UI
+        setAdminRecipes((prev) =>
+          prev.filter(
+            (recipe) => recipe.id !== id
+          )
+        );
+
+        // Update total recipe count
+        setStats((prev) => {
+          if (!prev) {
+            return prev;
+          }
+
+          const deletedRecipe =
+            adminRecipes.find(
+              (recipe) => recipe.id === id
+            );
+
+          const category =
+            deletedRecipe?.course;
+
+          return {
+            ...prev,
+            totalRecipes:
+              Math.max(
+                0,
+                prev.totalRecipes - 1
+              ),
+            recipesByCategory: category
+              ? {
+                  ...prev.recipesByCategory,
+                  [category]: Math.max(
+                    0,
+                    (prev.recipesByCategory?.[
+                      category
+                    ] || 0) - 1
+                  ),
+                }
+              : prev.recipesByCategory,
+          };
+        });
+
+        alert(
+          "Recipe deleted successfully."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Delete recipe error:",
+        error
+      );
+
+      alert(
+        error.response?.data?.message ||
+          "Failed to delete recipe."
+      );
     }
   };
 
@@ -169,20 +364,24 @@ function Profile() {
 
         <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-8 lg:p-10">
 
+          {/* ========================================== */}
           {/* Heading */}
+          {/* ========================================== */}
+
           <h1 className="text-3xl sm:text-4xl font-bold text-orange-500 mb-8">
             My Profile
           </h1>
 
+          {/* ========================================== */}
           {/* Profile Header */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-center gap-6 border-b pb-8">
+          {/* ========================================== */}
 
-            {/* Avatar */}
+          <div className="flex flex-col sm:flex-row items-center gap-6 border-b pb-8">
+
             <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-orange-100 flex items-center justify-center shadow-md shrink-0">
               <FaUserCircle className="text-6xl sm:text-8xl text-orange-500" />
             </div>
 
-            {/* User Info */}
             <div className="text-center sm:text-left min-w-0">
 
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 wrap-break-word">
@@ -193,13 +392,13 @@ function Profile() {
                 {user?.email}
               </p>
 
-              {/* Role */}
               <div className="mt-3">
                 <span
-                  className={`inline-block px-4 py-1.5 rounded-full text-sm font-semibold ${isAdmin
-                    ? "bg-purple-100 text-purple-700"
-                    : "bg-gray-100 text-gray-600"
-                    }`}
+                  className={`inline-block px-4 py-1.5 rounded-full text-sm font-semibold ${
+                    isAdmin
+                      ? "bg-purple-100 text-purple-700"
+                      : "bg-gray-100 text-gray-600"
+                  }`}
                 >
                   {isAdmin ? "Admin" : "User"}
                 </span>
@@ -209,7 +408,10 @@ function Profile() {
 
           </div>
 
+          {/* ========================================== */}
           {/* Favourite Recipes */}
+          {/* ========================================== */}
+
           <div className="mt-8 bg-orange-100 rounded-xl p-5">
 
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -225,18 +427,23 @@ function Profile() {
               </div>
 
               <div className="flex items-center gap-3 self-start sm:self-auto">
+
                 <FaHeart className="text-red-500 text-2xl sm:text-3xl" />
 
                 <span className="text-3xl sm:text-4xl font-bold">
                   {favorites.length}
                 </span>
+
               </div>
 
             </div>
 
           </div>
 
-          {/* ================= ADMIN SECTION ================= */}
+          {/* ========================================== */}
+          {/* ADMIN SECTION */}
+          {/* ========================================== */}
+
           {isAdmin && (
             <div className="mt-10 border-t pt-8">
 
@@ -255,6 +462,7 @@ function Profile() {
               </div>
 
               {/* Stats Loading */}
+
               {loadingStats && (
                 <div className="bg-orange-50 rounded-xl p-6 text-center">
                   <p className="text-orange-500 font-semibold">
@@ -264,6 +472,7 @@ function Profile() {
               )}
 
               {/* Stats Error */}
+
               {!loadingStats && statsError && (
                 <div className="bg-red-50 text-red-600 rounded-xl p-5">
                   {statsError}
@@ -271,120 +480,234 @@ function Profile() {
               )}
 
               {/* Stats */}
-              {!loadingStats && !statsError && stats && (
-                <>
-                  {/* Main Stats */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
-                    {/* Users */}
-                    <div className="bg-blue-50 rounded-xl p-6">
-                      <div className="flex items-center justify-between">
+              {!loadingStats &&
+                !statsError &&
+                stats && (
+                  <>
+                    {/* Main Stats */}
 
-                        <div>
-                          <p className="text-gray-600 font-medium">
-                            Registered Users
-                          </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
-                          <p className="text-4xl font-bold text-gray-800 mt-2">
-                            {stats.totalUsers}
-                          </p>
+                      {/* Users */}
+
+                      <div className="bg-blue-50 rounded-xl p-6">
+
+                        <div className="flex items-center justify-between">
+
+                          <div>
+                            <p className="text-gray-600 font-medium">
+                              Registered Users
+                            </p>
+
+                            <p className="text-4xl font-bold text-gray-800 mt-2">
+                              {stats.totalUsers}
+                            </p>
+                          </div>
+
+                          <FaUsers className="text-4xl text-blue-500" />
+
                         </div>
 
-                        <FaUsers className="text-4xl text-blue-500" />
-
                       </div>
-                    </div>
 
-                    {/* Recipes */}
-                    <div className="bg-green-50 rounded-xl p-6">
-                      <div className="flex items-center justify-between">
+                      {/* Recipes */}
 
-                        <div>
-                          <p className="text-gray-600 font-medium">
-                            Total Recipes
-                          </p>
+                      <div className="bg-green-50 rounded-xl p-6">
 
-                          <p className="text-4xl font-bold text-gray-800 mt-2">
-                            {stats.totalRecipes}
-                          </p>
+                        <div className="flex items-center justify-between">
+
+                          <div>
+                            <p className="text-gray-600 font-medium">
+                              Total Recipes
+                            </p>
+
+                            <p className="text-4xl font-bold text-gray-800 mt-2">
+                              {stats.totalRecipes}
+                            </p>
+                          </div>
+
+                          <FaUtensils className="text-4xl text-green-500" />
+
                         </div>
 
-                        <FaUtensils className="text-4xl text-green-500" />
-
-                      </div>
-                    </div>
-
-                  </div>
-
-                  {/* Category Statistics */}
-                  <div className="mt-6">
-
-                    <h3 className="text-xl font-bold text-gray-800 mb-4">
-                      Recipes by Category
-                    </h3>
-
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-                      {/* Snacks */}
-                      <div className="bg-yellow-50 rounded-xl p-5 text-center">
-                        <p className="text-gray-600">
-                          Snacks
-                        </p>
-
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
-                          {stats.recipesByCategory?.Snacks || 0}
-                        </p>
-                      </div>
-
-                      {/* Starter */}
-                      <div className="bg-pink-50 rounded-xl p-5 text-center">
-                        <p className="text-gray-600">
-                          Starter
-                        </p>
-
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
-                          {stats.recipesByCategory?.Starter || 0}
-                        </p>
-                      </div>
-
-                      {/* Main Course */}
-                      <div className="bg-orange-50 rounded-xl p-5 text-center">
-                        <p className="text-gray-600">
-                          Main Course
-                        </p>
-
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
-                          {stats.recipesByCategory?.["Main Course"] || 0}
-                        </p>
-                      </div>
-
-                      {/* Dessert */}
-                      <div className="bg-purple-50 rounded-xl p-5 text-center">
-                        <p className="text-gray-600">
-                          Dessert
-                        </p>
-
-                        <p className="text-3xl font-bold text-gray-800 mt-2">
-                          {stats.recipesByCategory?.Dessert || 0}
-                        </p>
                       </div>
 
                     </div>
 
+                    {/* Category Statistics */}
+
+                    <div className="mt-6">
+
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">
+                        Recipes by Category
+                      </h3>
+
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+                        {/* Snacks */}
+
+                        <div className="bg-yellow-50 rounded-xl p-5 text-center">
+
+                          <p className="text-gray-600">
+                            Snacks
+                          </p>
+
+                          <p className="text-3xl font-bold text-gray-800 mt-2">
+                            {stats.recipesByCategory?.Snacks || 0}
+                          </p>
+
+                        </div>
+
+                        {/* Starter */}
+
+                        <div className="bg-pink-50 rounded-xl p-5 text-center">
+
+                          <p className="text-gray-600">
+                            Starter
+                          </p>
+
+                          <p className="text-3xl font-bold text-gray-800 mt-2">
+                            {stats.recipesByCategory?.Starter || 0}
+                          </p>
+
+                        </div>
+
+                        {/* Main Course */}
+
+                        <div className="bg-orange-50 rounded-xl p-5 text-center">
+
+                          <p className="text-gray-600">
+                            Main Course
+                          </p>
+
+                          <p className="text-3xl font-bold text-gray-800 mt-2">
+                            {stats.recipesByCategory?.[
+                              "Main Course"
+                            ] || 0}
+                          </p>
+
+                        </div>
+
+                        {/* Dessert */}
+
+                        <div className="bg-purple-50 rounded-xl p-5 text-center">
+
+                          <p className="text-gray-600">
+                            Dessert
+                          </p>
+
+                          <p className="text-3xl font-bold text-gray-800 mt-2">
+                            {stats.recipesByCategory?.Dessert || 0}
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+                  </>
+                )}
+
+              {/* ========================================== */}
+              {/* Manage Recipes */}
+              {/* ========================================== */}
+
+              <div className="mt-8">
+
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">
+                  Manage Recipes
+                </h3>
+
+                {loadingRecipes ? (
+                  <div className="bg-gray-50 rounded-xl p-6 text-center">
+                    <p className="text-gray-500">
+                      Loading recipes...
+                    </p>
                   </div>
-                </>
-              )}
+                ) : adminRecipes.length === 0 ? (
+                  <div className="bg-gray-50 rounded-xl p-6 text-center">
+                    <p className="text-gray-500">
+                      No recipes available.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+
+                    {adminRecipes.map((recipe) => (
+
+                      <div
+                        key={recipe.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50 rounded-xl p-4"
+                      >
+
+                        {/* Recipe Info */}
+
+                        <div className="flex items-center gap-4 min-w-0">
+
+                          <img
+                            src={recipe.image}
+                            alt={recipe.name}
+                            className="w-16 h-16 rounded-lg object-cover shrink-0"
+                          />
+
+                          <div className="min-w-0">
+
+                            <h4 className="font-semibold text-gray-800 truncate">
+                              {recipe.name}
+                            </h4>
+
+                            <p className="text-sm text-gray-500">
+                              {recipe.course} • {recipe.cuisine}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                        {/* Actions */}
+
+                        <div className="flex gap-2 shrink-0">
+
+                          <button
+                            onClick={() =>
+                              handleDeleteRecipe(
+                                recipe.id
+                              )
+                            }
+                            className="flex items-center justify-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+                          >
+                            <FaTrash />
+                            Delete
+                          </button>
+
+                        </div>
+
+                      </div>
+
+                    ))}
+
+                  </div>
+                )}
+
+              </div>
 
             </div>
           )}
 
+          {/* ========================================== */}
           {/* Buttons */}
+          {/* ========================================== */}
+
           <div className="mt-8 flex flex-col md:flex-row gap-4">
 
-            {/* Add New Recipe - Admin Only */}
+            {/* Add New Recipe */}
+
             {isAdmin && (
               <button
-                onClick={() => setShowAddRecipe(true)}
+                onClick={() =>
+                  setShowAddRecipe(true)
+                }
                 className="flex-1 flex items-center justify-center gap-2 bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
               >
                 <FaPlus />
@@ -393,6 +716,7 @@ function Profile() {
             )}
 
             {/* Favourite Recipes */}
+
             <Link
               to="/favorites"
               className="flex-1 flex items-center justify-center bg-orange-500 text-white text-center py-3 rounded-xl font-semibold hover:bg-orange-600 transition"
@@ -401,6 +725,7 @@ function Profile() {
             </Link>
 
             {/* Logout */}
+
             <button
               onClick={handleLogout}
               className="flex-1 bg-red-500 text-white py-3 rounded-xl font-semibold hover:bg-red-600 transition"
@@ -410,13 +735,17 @@ function Profile() {
 
           </div>
 
+          {/* ========================================== */}
           {/* Add Recipe Popup */}
+          {/* ========================================== */}
+
           {showAddRecipe && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
 
               <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl p-6 sm:p-8">
 
                 {/* Popup Header */}
+
                 <div className="flex items-center justify-between mb-6">
 
                   <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
@@ -424,7 +753,9 @@ function Profile() {
                   </h2>
 
                   <button
-                    onClick={() => setShowAddRecipe(false)}
+                    onClick={() =>
+                      setShowAddRecipe(false)
+                    }
                     className="text-gray-500 hover:text-gray-800 text-2xl"
                   >
                     ×
@@ -432,23 +763,33 @@ function Profile() {
 
                 </div>
 
+                {/* Success Message */}
+
                 {recipeMessage && (
-                  <div className="bg-green-100 text-green-700 px-4 py-3 rounded-lg">
+                  <div className="bg-green-100 text-green-700 px-4 py-3 rounded-lg mb-4">
                     {recipeMessage}
                   </div>
                 )}
 
+                {/* Error Message */}
+
                 {recipeError && (
-                  <div className="bg-red-100 text-red-700 px-4 py-3 rounded-lg">
+                  <div className="bg-red-100 text-red-700 px-4 py-3 rounded-lg mb-4">
                     {recipeError}
                   </div>
                 )}
 
                 {/* Form */}
-                <form onSubmit={handleAddRecipe} className="space-y-5">
+
+                <form
+                  onSubmit={handleAddRecipe}
+                  className="space-y-5"
+                >
 
                   {/* Recipe Name */}
+
                   <div>
+
                     <label className="block font-semibold text-gray-700 mb-2">
                       Recipe Name
                     </label>
@@ -462,12 +803,15 @@ function Profile() {
                       required
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
                     />
+
                   </div>
 
                   {/* Category + Cuisine */}
+
                   <div className="grid sm:grid-cols-2 gap-4">
 
                     <div>
+
                       <label className="block font-semibold text-gray-700 mb-2">
                         Category
                       </label>
@@ -479,15 +823,31 @@ function Profile() {
                         required
                         className="w-full border border-gray-300 rounded-lg px-4 py-3"
                       >
-                        <option value="">Select Category</option>
-                        <option value="Snacks">Snacks</option>
-                        <option value="Starter">Starter</option>
-                        <option value="Main Course">Main Course</option>
-                        <option value="Dessert">Dessert</option>
+                        <option value="">
+                          Select Category
+                        </option>
+
+                        <option value="Snacks">
+                          Snacks
+                        </option>
+
+                        <option value="Starter">
+                          Starter
+                        </option>
+
+                        <option value="Main Course">
+                          Main Course
+                        </option>
+
+                        <option value="Dessert">
+                          Dessert
+                        </option>
                       </select>
+
                     </div>
 
                     <div>
+
                       <label className="block font-semibold text-gray-700 mb-2">
                         Cuisine
                       </label>
@@ -499,18 +859,35 @@ function Profile() {
                         required
                         className="w-full border border-gray-300 rounded-lg px-4 py-3"
                       >
-                        <option value="">Select Cuisine</option>
-                        <option value="Indian">Indian</option>
-                        <option value="Chinese">Chinese</option>
-                        <option value="Italian">Italian</option>
-                        <option value="American">American</option>
+                        <option value="">
+                          Select Cuisine
+                        </option>
+
+                        <option value="Indian">
+                          Indian
+                        </option>
+
+                        <option value="Chinese">
+                          Chinese
+                        </option>
+
+                        <option value="Italian">
+                          Italian
+                        </option>
+
+                        <option value="American">
+                          American
+                        </option>
                       </select>
+
                     </div>
 
                   </div>
 
                   {/* Subcategory */}
+
                   <div>
+
                     <label className="block font-semibold text-gray-700 mb-2">
                       Subcategory
                     </label>
@@ -527,10 +904,13 @@ function Profile() {
                     <p className="text-sm text-gray-500 mt-1">
                       Mainly used for Main Course recipes.
                     </p>
+
                   </div>
 
                   {/* Diet */}
+
                   <div>
+
                     <label className="block font-semibold text-gray-700 mb-2">
                       Type
                     </label>
@@ -538,33 +918,51 @@ function Profile() {
                     <div className="flex gap-6">
 
                       <label className="flex items-center gap-2">
+
                         <input
                           type="radio"
                           name="diet"
                           value="Veg"
-                          checked={recipeForm.diet === "Veg"}
-                          onChange={handleRecipeChange}
+                          checked={
+                            recipeForm.diet === "Veg"
+                          }
+                          onChange={
+                            handleRecipeChange
+                          }
                           required
                         />
+
                         Veg
+
                       </label>
 
                       <label className="flex items-center gap-2">
+
                         <input
                           type="radio"
                           name="diet"
                           value="Non-Veg"
-                          checked={recipeForm.diet === "Non-Veg"}
-                          onChange={handleRecipeChange}
+                          checked={
+                            recipeForm.diet ===
+                            "Non-Veg"
+                          }
+                          onChange={
+                            handleRecipeChange
+                          }
                         />
+
                         Non-Veg
+
                       </label>
 
                     </div>
+
                   </div>
 
                   {/* Image */}
+
                   <div>
+
                     <label className="block font-semibold text-gray-700 mb-2">
                       Image URL
                     </label>
@@ -578,10 +976,13 @@ function Profile() {
                       required
                       className="w-full border border-gray-300 rounded-lg px-4 py-3"
                     />
+
                   </div>
 
                   {/* Recipe URL */}
+
                   <div>
+
                     <label className="block font-semibold text-gray-700 mb-2">
                       Recipe URL
                     </label>
@@ -594,10 +995,13 @@ function Profile() {
                       placeholder="https://youtube.com/..."
                       className="w-full border border-gray-300 rounded-lg px-4 py-3"
                     />
+
                   </div>
 
                   {/* Description */}
+
                   <div>
+
                     <label className="block font-semibold text-gray-700 mb-2">
                       Description
                     </label>
@@ -611,18 +1015,25 @@ function Profile() {
                       required
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 resize-none"
                     />
+
                   </div>
 
                   {/* Ingredients */}
+
                   <div>
+
                     <label className="block font-semibold text-gray-700 mb-2">
                       Ingredients
                     </label>
 
                     <textarea
                       name="ingredients"
-                      value={recipeForm.ingredients}
-                      onChange={handleRecipeChange}
+                      value={
+                        recipeForm.ingredients
+                      }
+                      onChange={
+                        handleRecipeChange
+                      }
                       rows="5"
                       placeholder={`Enter one ingredient per line
 250g Paneer
@@ -631,10 +1042,13 @@ function Profile() {
                       required
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 resize-none"
                     />
+
                   </div>
 
                   {/* Process */}
+
                   <div>
+
                     <label className="block font-semibold text-gray-700 mb-2">
                       Cooking Process
                     </label>
@@ -642,7 +1056,9 @@ function Profile() {
                     <textarea
                       name="process"
                       value={recipeForm.process}
-                      onChange={handleRecipeChange}
+                      onChange={
+                        handleRecipeChange
+                      }
                       rows="6"
                       placeholder={`Enter one step per line
 Heat butter in a pan.
@@ -653,10 +1069,13 @@ Serve hot.`}
                       required
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 resize-none"
                     />
+
                   </div>
 
                   {/* Prep Time */}
+
                   <div>
+
                     <label className="block font-semibold text-gray-700 mb-2">
                       Prep Time (minutes)
                     </label>
@@ -664,21 +1083,29 @@ Serve hot.`}
                     <input
                       type="number"
                       name="prepTime"
-                      value={recipeForm.prepTime}
-                      onChange={handleRecipeChange}
+                      value={
+                        recipeForm.prepTime
+                      }
+                      onChange={
+                        handleRecipeChange
+                      }
                       min="1"
                       placeholder="40"
                       required
                       className="w-full border border-gray-300 rounded-lg px-4 py-3"
                     />
+
                   </div>
 
-                  {/* Buttons */}
+                  {/* Form Buttons */}
+
                   <div className="flex flex-col sm:flex-row gap-3 pt-4">
 
                     <button
                       type="button"
-                      onClick={() => setShowAddRecipe(false)}
+                      onClick={() =>
+                        setShowAddRecipe(false)
+                      }
                       className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition"
                     >
                       Cancel
@@ -689,7 +1116,9 @@ Serve hot.`}
                       disabled={addingRecipe}
                       className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition disabled:opacity-60"
                     >
-                      {addingRecipe ? "Adding Recipe..." : "Add Recipe"}
+                      {addingRecipe
+                        ? "Adding Recipe..."
+                        : "Add Recipe"}
                     </button>
 
                   </div>

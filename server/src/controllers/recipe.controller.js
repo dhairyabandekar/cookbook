@@ -1,6 +1,8 @@
 const Recipe = require("../models/Recipe.model");
 
+// ==========================================
 // Get all recipes
+// ==========================================
 const getRecipes = async (req, res) => {
   try {
     const recipes = await Recipe.find().sort({ createdAt: -1 });
@@ -19,7 +21,9 @@ const getRecipes = async (req, res) => {
   }
 };
 
+// ==========================================
 // Get single recipe
+// ==========================================
 const getRecipeById = async (req, res) => {
   try {
     const recipe = await Recipe.findOne({
@@ -47,7 +51,9 @@ const getRecipeById = async (req, res) => {
   }
 };
 
+// ==========================================
 // Add new recipe - Admin only
+// ==========================================
 const createRecipe = async (req, res) => {
   try {
     const {
@@ -109,7 +115,8 @@ const createRecipe = async (req, res) => {
           ? subcategory || ""
           : "",
 
-      // Defaults until we add these fields to the form
+      // Defaults until Taste and Difficulty
+      // are added to the form
       taste: taste || "Savoury",
 
       difficulty: difficulty || "Easy",
@@ -129,6 +136,7 @@ const createRecipe = async (req, res) => {
       // Form prepTime → database time
       time: Number(prepTime),
 
+      // Logged-in admin
       addedBy: req.user.id,
     });
 
@@ -148,8 +156,51 @@ const createRecipe = async (req, res) => {
   }
 };
 
+// ==========================================
+// Delete recipe - Admin only
+// ==========================================
+const deleteRecipe = async (req, res) => {
+  try {
+    const recipeId = Number(req.params.id);
+
+    // Find recipe
+    const recipe = await Recipe.findOne({
+      id: recipeId,
+    });
+
+    // Recipe doesn't exist
+    if (!recipe) {
+      return res.status(404).json({
+        success: false,
+        message: "Recipe not found",
+      });
+    }
+
+    // Delete recipe
+    await Recipe.deleteOne({
+      id: recipeId,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Recipe deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete recipe error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete recipe",
+    });
+  }
+};
+
+// ==========================================
+// Export controllers
+// ==========================================
 module.exports = {
   getRecipes,
   getRecipeById,
   createRecipe,
+  deleteRecipe,
 };

@@ -7,20 +7,40 @@ const {
   getRecipes,
   getRecipeById,
   createRecipe,
+  deleteRecipe,
 } = require("../controllers/recipe.controller");
 
 const router = express.Router();
 
+// ==========================================
 // Public routes
+// ==========================================
+
+// Get all recipes
 router.get("/", getRecipes);
+
+// Get single recipe
 router.get("/:id", getRecipeById);
 
-// Admin-only route
+
+// ==========================================
+// Admin-only routes
+// ==========================================
+
+// Add recipe
 router.post(
   "/",
   authMiddleware,
   adminMiddleware,
   createRecipe
+);
+
+// Delete recipe
+router.delete(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  deleteRecipe
 );
 
 module.exports = router;
