@@ -195,6 +195,109 @@ const deleteRecipe = async (req, res) => {
   }
 };
 
+// Update recipe - Admin only
+const updateRecipe = async (req, res) => {
+  try {
+    const recipeId = Number(req.params.id);
+
+    const {
+      name,
+      category,
+      subcategory,
+      cuisine,
+      diet,
+      image,
+      url,
+      description,
+      ingredients,
+      process,
+      prepTime,
+      taste,
+      difficulty,
+    } = req.body;
+
+    // Check required fields
+    if (
+      !name ||
+      !category ||
+      !cuisine ||
+      !diet ||
+      !image ||
+      !description ||
+      !ingredients ||
+      !process ||
+      prepTime === undefined
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all required fields",
+      });
+    }
+
+    // Find recipe
+    const recipe = await Recipe.findOne({
+      id: recipeId,
+    });
+
+    if (!recipe) {
+      return res.status(404).json({
+        success: false,
+        message: "Recipe not found",
+      });
+    }
+
+    // Update recipe
+    recipe.name = name;
+    recipe.diet = diet;
+    recipe.cuisine = cuisine;
+
+    // Form category → database course
+    recipe.course = category;
+
+    // Subcategory only for Main Course
+    recipe.subcategory =
+      category === "Main Course"
+        ? subcategory || ""
+        : "";
+
+    recipe.taste = taste || recipe.taste || "Savoury";
+    recipe.difficulty =
+      difficulty || recipe.difficulty || "Easy";
+
+    recipe.image = image;
+
+    // Form url → database youtube
+    recipe.youtube = url || "";
+
+    recipe.description = description;
+
+    // Form ingredients → database ingredients
+    recipe.ingredients = ingredients;
+
+    // Form process → database steps
+    recipe.steps = process;
+
+    // Form prepTime → database time
+    recipe.time = Number(prepTime);
+
+    const updatedRecipe = await recipe.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Recipe updated successfully",
+      recipe: updatedRecipe,
+    });
+  } catch (error) {
+    console.error("Update recipe error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to update recipe",
+      error: error.message,
+    });
+  }
+};
+
 // ==========================================
 // Export controllers
 // ==========================================
@@ -203,4 +306,5 @@ module.exports = {
   getRecipeById,
   createRecipe,
   deleteRecipe,
+  updateRecipe,
 };

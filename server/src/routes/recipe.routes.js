@@ -8,6 +8,7 @@ const {
   getRecipeById,
   createRecipe,
   deleteRecipe,
+  updateRecipe,
 } = require("../controllers/recipe.controller");
 
 const router = express.Router();
@@ -41,6 +42,14 @@ router.delete(
   authMiddleware,
   adminMiddleware,
   deleteRecipe
+);
+
+// Update recipe
+router.put(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  updateRecipe
 );
 
 module.exports = router;
