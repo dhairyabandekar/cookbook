@@ -3,13 +3,9 @@ const Recipe = require("../models/Recipe.model");
 
 const getAdminStats = async (req, res) => {
   try {
-    // Total registered users
     const totalUsers = await User.countDocuments();
-
-    // Total recipes
     const totalRecipes = await Recipe.countDocuments();
 
-    // Recipes grouped by course/category
     const categoryStats = await Recipe.aggregate([
       {
         $group: {
@@ -19,7 +15,8 @@ const getAdminStats = async (req, res) => {
       },
     ]);
 
-    // Default category counts
+    console.log("CATEGORY STATS:", categoryStats);
+
     const recipesByCategory = {
       Snacks: 0,
       Starter: 0,
@@ -27,12 +24,23 @@ const getAdminStats = async (req, res) => {
       Dessert: 0,
     };
 
-    // Fill category counts
     categoryStats.forEach((item) => {
-      if (item._id && recipesByCategory[item._id] !== undefined) {
+      console.log(
+        "CATEGORY:",
+        item._id,
+        "COUNT:",
+        item.count
+      );
+
+      if (item._id) {
         recipesByCategory[item._id] = item.count;
       }
     });
+
+    console.log(
+      "FINAL CATEGORY COUNTS:",
+      recipesByCategory
+    );
 
     res.status(200).json({
       success: true,
