@@ -12,6 +12,15 @@ function Filters({
     }));
   };
 
+  // Course dropdown value
+  // If multiple courses are selected from the Home page,
+  // show "Multiple Selected" in the dropdown.
+  const courseValue = Array.isArray(filters.course)
+    ? filters.course.length === 1
+      ? filters.course[0]
+      : "Multiple"
+    : filters.course;
+
   return (
     <div className="mb-8">
 
@@ -130,16 +139,25 @@ function Filters({
             </label>
 
             <select
-              value={filters.course}
+              value={courseValue}
               onChange={(e) =>
                 updateFilter("course", e.target.value)
               }
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             >
+              {Array.isArray(filters.course) &&
+                filters.course.length > 1 && (
+                  <option value="Multiple">
+                    Multiple Selected
+                  </option>
+                )}
+
               <option value="All">All</option>
               <option value="Snacks">Snacks</option>
               <option value="Starter">Starter</option>
-              <option value="Main Course">Main Course</option>
+              <option value="Main Course">
+                Main Course
+              </option>
               <option value="Dessert">Dessert</option>
             </select>
           </div>
