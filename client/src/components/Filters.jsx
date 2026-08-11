@@ -113,25 +113,6 @@ function Filters({
             </select>
           </div>
 
-          {/* Taste */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Taste
-            </label>
-
-            <select
-              value={filters.taste}
-              onChange={(e) =>
-                updateFilter("taste", e.target.value)
-              }
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            >
-              <option value="All">All</option>
-              <option value="Sweet">Sweet</option>
-              <option value="Savoury">Savoury</option>
-            </select>
-          </div>
-
           {/* Course */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

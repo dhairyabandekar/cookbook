@@ -24,8 +24,6 @@ function Recipes() {
     search: "",
     diet: "All",
     cuisine: "All",
-    taste: "All",
-
     course:
       courseFromURL.length > 0
         ? courseFromURL
@@ -95,7 +93,6 @@ function Recipes() {
       search: "",
       diet: "All",
       cuisine: "All",
-      taste: "All",
       course: "All",
       subcategory: "All",
     });
@@ -131,10 +128,6 @@ function Recipes() {
         // Cuisine
         (filters.cuisine === "All" ||
           recipe.cuisine === filters.cuisine) &&
-
-        // Taste
-        (filters.taste === "All" ||
-          recipe.taste === filters.taste) &&
 
         // Course
         courseMatches &&
