@@ -1,71 +1,276 @@
+import { useState } from "react";
+
 function Contact() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
+
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    setLoading(true);
+    setStatus("");
+
+    try {
+      const data = new FormData();
+
+      data.append(
+        "access_key",
+        import.meta.env.VITE_WEB3FORMS_ACCESS_KEY
+      );
+
+      data.append("name", formData.name);
+      data.append("email", formData.email);
+      data.append("message", formData.message);
+
+      data.append(
+        "subject",
+        "New Contact Message - Cook Book"
+      );
+
+      data.append(
+        "from_name",
+        "Cook Book Contact Form"
+      );
+
+      const response = await fetch(
+        "https://api.web3forms.com/submit",
+        {
+          method: "POST",
+          body: data,
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        setStatus(
+          "success"
+        );
+
+        setFormData({
+          name: "",
+          email: "",
+          message: "",
+        });
+      } else {
+        setStatus(
+          "error"
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Contact form error:",
+        error
+      );
+
+      setStatus("error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <main className="max-w-4xl mx-auto px-6 py-12">
+    <main className="min-h-screen bg-orange-50">
 
-      <h1 className="text-4xl font-bold text-center text-orange-600">
-        Contact Us
-      </h1>
+      {/* Hero Section */}
 
-      <p className="text-center mt-4 text-gray-600">
-        We'd love to hear your feedback, recipe suggestions,
-        or any questions you have.
-      </p>
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
 
-      <div className="bg-white rounded-xl shadow-lg mt-10 p-8">
+        <div className="text-center">
 
-        <form className="space-y-6">
-
-          <div>
-
-            <label className="block font-semibold mb-2">
-              Name
-            </label>
-
-            <input
-              type="text"
-              placeholder="Enter your name"
-              className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
-
+          <div className="text-5xl mb-5">
+            📩
           </div>
 
-          <div>
+          <h1 className="text-4xl sm:text-5xl font-bold text-orange-600">
+            Contact Us
+          </h1>
 
-            <label className="block font-semibold mb-2">
-              Email
-            </label>
+          <p className="mt-5 text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-7">
+            We'd love to hear from you! Share your feedback,
+            recipe suggestions, questions, or anything else
+            you'd like to tell us.
+          </p>
 
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
+        </div>
 
-          </div>
 
-          <div>
+        {/* Contact Form */}
 
-            <label className="block font-semibold mb-2">
-              Message
-            </label>
+        <div className="bg-white rounded-2xl shadow-lg mt-10 p-6 sm:p-8 lg:p-10">
 
-            <textarea
-              rows="6"
-              placeholder="Write your message..."
-              className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
-            ></textarea>
-
-          </div>
-
-          <button
-            className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-lg transition"
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
           >
-            Send Message
-          </button>
 
-        </form>
+            {/* Name */}
 
-      </div>
+            <div>
+
+              <label
+                htmlFor="name"
+                className="block font-semibold text-gray-700 mb-2"
+              >
+                Name
+              </label>
+
+              <input
+                id="name"
+                name="name"
+                type="text"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Enter your name"
+                required
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+
+            </div>
+
+
+            {/* Email */}
+
+            <div>
+
+              <label
+                htmlFor="email"
+                className="block font-semibold text-gray-700 mb-2"
+              >
+                Email
+              </label>
+
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Enter your email"
+                required
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+
+            </div>
+
+
+            {/* Message */}
+
+            <div>
+
+              <label
+                htmlFor="message"
+                className="block font-semibold text-gray-700 mb-2"
+              >
+                Message
+              </label>
+
+              <textarea
+                id="message"
+                name="message"
+                rows="6"
+                value={formData.message}
+                onChange={handleChange}
+                placeholder="Write your message..."
+                required
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+
+            </div>
+
+
+            {/* Success Message */}
+
+            {status === "success" && (
+              <div className="bg-green-100 text-green-700 rounded-lg px-4 py-3">
+                ✅ Your message has been sent successfully!
+              </div>
+            )}
+
+
+            {/* Error Message */}
+
+            {status === "error" && (
+              <div className="bg-red-100 text-red-700 rounded-lg px-4 py-3">
+                ❌ Something went wrong. Please try again.
+              </div>
+            )}
+
+
+            {/* Submit Button */}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white px-8 py-3 rounded-lg font-semibold transition"
+            >
+              {loading
+                ? "Sending..."
+                : "Send Message"}
+            </button>
+
+          </form>
+
+        </div>
+
+
+        {/* Contact Information */}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
+
+          <div className="bg-white rounded-2xl shadow-md p-6 text-center">
+
+            <div className="text-4xl">
+              💡
+            </div>
+
+            <h2 className="text-xl font-bold text-gray-800 mt-4">
+              Recipe Suggestions
+            </h2>
+
+            <p className="text-gray-600 mt-2">
+              Have a recipe you'd love to see on Cook Book?
+              Send us your suggestion!
+            </p>
+
+          </div>
+
+
+          <div className="bg-white rounded-2xl shadow-md p-6 text-center">
+
+            <div className="text-4xl">
+              💬
+            </div>
+
+            <h2 className="text-xl font-bold text-gray-800 mt-4">
+              Feedback
+            </h2>
+
+            <p className="text-gray-600 mt-2">
+              Your feedback helps us improve the Cook Book
+              experience.
+            </p>
+
+          </div>
+
+        </div>
+
+      </section>
 
     </main>
   );
