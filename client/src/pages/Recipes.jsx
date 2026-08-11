@@ -7,7 +7,7 @@ import { getRecipes } from "../services/recipe.service";
 function Recipes() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const courseFromURL = searchParams.get("course") || "All";
+  const courseFromURL = searchParams.getAll("course") || "All";
   const subcategoryFromURL =
     searchParams.get("subcategory") || "All";
 

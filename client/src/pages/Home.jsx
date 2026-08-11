@@ -92,11 +92,11 @@ function Home() {
                     </Link>
 
                     <Link
-                        to="/recipes?course=Snacks"
+                        to="/recipes?course=Snacks&course=Starter"
                         className="bg-white rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-2 transition-all duration-300 p-4 md:p-6 text-center"
                     >
                         <div className="text-4xl md:text-5xl mb-4">🥟</div>
-                        <h3 className="font-semibold text-sm md:text-base">Snacks</h3>
+                        <h3 className="font-semibold text-sm md:text-base">Snacks & Starters</h3>
                     </Link>
 
                     <Link
