@@ -1,18 +1,25 @@
 const Recipe = require("../models/Recipe.model");
+const User = require("../models/User.model");
 
 // ==========================================
 // Get all recipes
 // ==========================================
+
 const getRecipes = async (req, res) => {
   try {
-    const recipes = await Recipe.find().sort({ createdAt: -1 });
+    const recipes = await Recipe.find().sort({
+      createdAt: -1,
+    });
 
     res.status(200).json({
       success: true,
       recipes,
     });
   } catch (error) {
-    console.error("Get recipes error:", error);
+    console.error(
+      "Get recipes error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
@@ -24,6 +31,7 @@ const getRecipes = async (req, res) => {
 // ==========================================
 // Get single recipe
 // ==========================================
+
 const getRecipeById = async (req, res) => {
   try {
     const recipe = await Recipe.findOne({
@@ -42,7 +50,10 @@ const getRecipeById = async (req, res) => {
       recipe,
     });
   } catch (error) {
-    console.error("Get recipe error:", error);
+    console.error(
+      "Get recipe error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
@@ -54,6 +65,7 @@ const getRecipeById = async (req, res) => {
 // ==========================================
 // Add new recipe - Admin only
 // ==========================================
+
 const createRecipe = async (req, res) => {
   try {
     const {
@@ -86,7 +98,8 @@ const createRecipe = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Please fill all required fields",
+        message:
+          "Please fill all required fields",
       });
     }
 
@@ -95,7 +108,9 @@ const createRecipe = async (req, res) => {
       .sort({ id: -1 })
       .select("id");
 
-    const nextId = lastRecipe ? lastRecipe.id + 1 : 1;
+    const nextId = lastRecipe
+      ? lastRecipe.id + 1
+      : 1;
 
     // Create recipe
     const recipe = await Recipe.create({
@@ -115,8 +130,7 @@ const createRecipe = async (req, res) => {
           ? subcategory || ""
           : "",
 
-      // Defaults until Taste and Difficulty
-      // are added to the form
+      // Defaults
       taste: taste || "Savoury",
 
       difficulty: difficulty || "Easy",
@@ -136,7 +150,6 @@ const createRecipe = async (req, res) => {
       // Form prepTime → database time
       time: Number(prepTime),
 
-      // Logged-in admin
       addedBy: req.user.id,
     });
 
@@ -146,7 +159,10 @@ const createRecipe = async (req, res) => {
       recipe,
     });
   } catch (error) {
-    console.error("Create recipe error:", error);
+    console.error(
+      "Create recipe error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
@@ -159,16 +175,16 @@ const createRecipe = async (req, res) => {
 // ==========================================
 // Delete recipe - Admin only
 // ==========================================
+
 const deleteRecipe = async (req, res) => {
   try {
     const recipeId = Number(req.params.id);
 
-    // Find recipe
+    // Find recipe first
     const recipe = await Recipe.findOne({
       id: recipeId,
     });
 
-    // Recipe doesn't exist
     if (!recipe) {
       return res.status(404).json({
         success: false,
@@ -181,12 +197,32 @@ const deleteRecipe = async (req, res) => {
       id: recipeId,
     });
 
+    // ==========================================
+    // Remove deleted recipe from ALL users'
+    // favourites
+    // ==========================================
+
+    await User.updateMany(
+      {
+        favorites: recipeId,
+      },
+      {
+        $pull: {
+          favorites: recipeId,
+        },
+      }
+    );
+
     res.status(200).json({
       success: true,
-      message: "Recipe deleted successfully",
+      message:
+        "Recipe deleted successfully",
     });
   } catch (error) {
-    console.error("Delete recipe error:", error);
+    console.error(
+      "Delete recipe error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
@@ -195,7 +231,10 @@ const deleteRecipe = async (req, res) => {
   }
 };
 
+// ==========================================
 // Update recipe - Admin only
+// ==========================================
+
 const updateRecipe = async (req, res) => {
   try {
     const recipeId = Number(req.params.id);
@@ -216,7 +255,19 @@ const updateRecipe = async (req, res) => {
       difficulty,
     } = req.body;
 
-    // Check required fields
+    // Check recipe exists
+    const recipe = await Recipe.findOne({
+      id: recipeId,
+    });
+
+    if (!recipe) {
+      return res.status(404).json({
+        success: false,
+        message: "Recipe not found",
+      });
+    }
+
+    // Required fields
     if (
       !name ||
       !category ||
@@ -230,39 +281,33 @@ const updateRecipe = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Please fill all required fields",
-      });
-    }
-
-    // Find recipe
-    const recipe = await Recipe.findOne({
-      id: recipeId,
-    });
-
-    if (!recipe) {
-      return res.status(404).json({
-        success: false,
-        message: "Recipe not found",
+        message:
+          "Please fill all required fields",
       });
     }
 
     // Update recipe
     recipe.name = name;
+
     recipe.diet = diet;
+
     recipe.cuisine = cuisine;
 
     // Form category → database course
     recipe.course = category;
 
-    // Subcategory only for Main Course
     recipe.subcategory =
       category === "Main Course"
         ? subcategory || ""
         : "";
 
-    recipe.taste = taste || recipe.taste || "Savoury";
+    recipe.taste =
+      taste || recipe.taste || "Savoury";
+
     recipe.difficulty =
-      difficulty || recipe.difficulty || "Easy";
+      difficulty ||
+      recipe.difficulty ||
+      "Easy";
 
     recipe.image = image;
 
@@ -271,7 +316,7 @@ const updateRecipe = async (req, res) => {
 
     recipe.description = description;
 
-    // Form ingredients → database ingredients
+    // Form ingredients
     recipe.ingredients = ingredients;
 
     // Form process → database steps
@@ -280,15 +325,19 @@ const updateRecipe = async (req, res) => {
     // Form prepTime → database time
     recipe.time = Number(prepTime);
 
-    const updatedRecipe = await recipe.save();
+    await recipe.save();
 
     res.status(200).json({
       success: true,
-      message: "Recipe updated successfully",
-      recipe: updatedRecipe,
+      message:
+        "Recipe updated successfully",
+      recipe,
     });
   } catch (error) {
-    console.error("Update recipe error:", error);
+    console.error(
+      "Update recipe error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
@@ -299,12 +348,13 @@ const updateRecipe = async (req, res) => {
 };
 
 // ==========================================
-// Export controllers
+// Export
 // ==========================================
+
 module.exports = {
   getRecipes,
   getRecipeById,
   createRecipe,
-  deleteRecipe,
   updateRecipe,
+  deleteRecipe,
 };
