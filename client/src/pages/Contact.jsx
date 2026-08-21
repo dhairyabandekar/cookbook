@@ -1,4 +1,5 @@
 import { useState } from "react";
+import emailjs from "@emailjs/browser";
 
 function Contact() {
   const [formData, setFormData] = useState({
@@ -26,57 +27,30 @@ function Contact() {
     setStatus("");
 
     try {
-      const data = new FormData();
+      const templateParams = {
+        name: formData.name,
+        email: formData.email,
+        message: formData.message,
+      };
 
-      data.append(
-        "access_key",
-        import.meta.env.VITE_WEB3FORMS_ACCESS_KEY
-      );
-
-      data.append("name", formData.name);
-      data.append("email", formData.email);
-      data.append("message", formData.message);
-
-      data.append(
-        "subject",
-        "New Contact Message - Cook Book"
-      );
-
-      data.append(
-        "from_name",
-        "Cook Book Contact Form"
-      );
-
-      const response = await fetch(
-        "https://api.web3forms.com/submit",
+      await emailjs.send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_CONTACT_TEMPLATE_ID,
+        templateParams,
         {
-          method: "POST",
-          body: data,
+          publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY,
         }
       );
 
-      const result = await response.json();
+      setStatus("success");
 
-      if (result.success) {
-        setStatus(
-          "success"
-        );
-
-        setFormData({
-          name: "",
-          email: "",
-          message: "",
-        });
-      } else {
-        setStatus(
-          "error"
-        );
-      }
+      setFormData({
+        name: "",
+        email: "",
+        message: "",
+      });
     } catch (error) {
-      console.error(
-        "Contact form error:",
-        error
-      );
+      console.error("EmailJS error:", error);
 
       setStatus("error");
     } finally {
@@ -88,7 +62,6 @@ function Contact() {
     <main className="min-h-screen bg-orange-50">
 
       {/* Hero Section */}
-
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
 
         <div className="text-center">
@@ -111,7 +84,6 @@ function Contact() {
 
 
         {/* Contact Form */}
-
         <div className="bg-white rounded-2xl shadow-lg mt-10 p-6 sm:p-8 lg:p-10">
 
           <form
@@ -120,7 +92,6 @@ function Contact() {
           >
 
             {/* Name */}
-
             <div>
 
               <label
@@ -145,7 +116,6 @@ function Contact() {
 
 
             {/* Email */}
-
             <div>
 
               <label
@@ -170,7 +140,6 @@ function Contact() {
 
 
             {/* Message */}
-
             <div>
 
               <label
@@ -195,33 +164,41 @@ function Contact() {
 
 
             {/* Success Message */}
-
             {status === "success" && (
-              <div className="bg-green-100 text-green-700 rounded-lg px-4 py-3">
-                ✅ Your message has been sent successfully!
+              <div className="bg-green-100 border border-green-200 text-green-700 rounded-lg px-4 py-3">
+                <p className="font-semibold">
+                  ✅ Message sent successfully!
+                </p>
+
+                <p className="text-sm mt-1">
+                  Thank you for your feedback. A confirmation email
+                  has been sent to your email address.
+                </p>
               </div>
             )}
 
 
             {/* Error Message */}
-
             {status === "error" && (
-              <div className="bg-red-100 text-red-700 rounded-lg px-4 py-3">
-                ❌ Something went wrong. Please try again.
+              <div className="bg-red-100 border border-red-200 text-red-700 rounded-lg px-4 py-3">
+                <p className="font-semibold">
+                  ❌ Something went wrong.
+                </p>
+
+                <p className="text-sm mt-1">
+                  Please try again in a moment.
+                </p>
               </div>
             )}
 
 
             {/* Submit Button */}
-
             <button
               type="submit"
               disabled={loading}
               className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white px-8 py-3 rounded-lg font-semibold transition"
             >
-              {loading
-                ? "Sending..."
-                : "Send Message"}
+              {loading ? "Sending..." : "Send Message"}
             </button>
 
           </form>
@@ -229,10 +206,10 @@ function Contact() {
         </div>
 
 
-        {/* Contact Information */}
-
+        {/* Additional Information */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
 
+          {/* Recipe Suggestions */}
           <div className="bg-white rounded-2xl shadow-md p-6 text-center">
 
             <div className="text-4xl">
@@ -243,7 +220,7 @@ function Contact() {
               Recipe Suggestions
             </h2>
 
-            <p className="text-gray-600 mt-2">
+            <p className="text-gray-600 mt-2 leading-6">
               Have a recipe you'd love to see on Cook Book?
               Send us your suggestion!
             </p>
@@ -251,6 +228,7 @@ function Contact() {
           </div>
 
 
+          {/* Feedback */}
           <div className="bg-white rounded-2xl shadow-md p-6 text-center">
 
             <div className="text-4xl">
@@ -261,7 +239,7 @@ function Contact() {
               Feedback
             </h2>
 
-            <p className="text-gray-600 mt-2">
+            <p className="text-gray-600 mt-2 leading-6">
               Your feedback helps us improve the Cook Book
               experience.
             </p>
