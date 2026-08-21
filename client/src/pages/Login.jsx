@@ -57,10 +57,13 @@ function Login() {
   return (
     <div className="min-h-screen bg-orange-50 flex justify-center items-center px-4">
       <div className="bg-white shadow-xl rounded-xl p-8 w-full max-w-md">
+
+        {/* Heading */}
         <h1 className="text-3xl font-bold text-center text-orange-500 mb-6">
           Welcome Back
         </h1>
 
+        {/* Error */}
         {error && (
           <p className="bg-red-100 text-red-700 p-3 rounded-lg mb-4">
             {error}
@@ -68,6 +71,8 @@ function Login() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
+
+          {/* Email */}
           <input
             type="email"
             name="email"
@@ -77,6 +82,7 @@ function Login() {
             className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
 
+          {/* Password */}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -92,10 +98,25 @@ function Login() {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-orange-500"
             >
-              {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+              {showPassword ? (
+                <FaEyeSlash size={18} />
+              ) : (
+                <FaEye size={18} />
+              )}
             </button>
           </div>
 
+          {/* Forgot Password */}
+          <div className="text-right -mt-2">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-orange-500 font-semibold hover:text-orange-600 hover:underline"
+            >
+              Forgot Password?
+            </Link>
+          </div>
+
+          {/* Login Button */}
           <button
             type="submit"
             disabled={loading}
@@ -105,6 +126,7 @@ function Login() {
           </button>
         </form>
 
+        {/* Register */}
         <p className="text-center mt-6 text-gray-600">
           Don't have an account?{" "}
           <Link
@@ -114,6 +136,7 @@ function Login() {
             Register
           </Link>
         </p>
+
       </div>
     </div>
   );

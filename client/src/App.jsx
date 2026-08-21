@@ -5,6 +5,8 @@ import Recipes from "./pages/Recipes";
 import RecipeDetails from "./pages/RecipeDetails";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import VerifyOTP from "./pages/VerifyOTP";
+import ResetPassword from "./pages/ResetPassword";
 
 // Auth Pages
 import Login from "./pages/Login";
@@ -36,6 +38,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} /> 
+        <Route path="/reset-password" element={<ResetPassword />} /> 
       </Routes>
     </>
   );
