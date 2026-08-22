@@ -8,11 +8,30 @@ const nodemailer = require("nodemailer");
 // ======================================================
 
 const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
+
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
+});
+
+// Temporary SMTP connection test
+transporter.verify((error, success) => {
+    if (error) {
+        console.error(
+            "❌ Email transporter error:",
+            error.message
+        );
+    } else {
+        console.log("✅ Email transporter is ready");
+    }
 });
 
 
@@ -24,7 +43,6 @@ const register = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
-        // Check required fields
         if (!name || !email || !password) {
             return res.status(400).json({
                 success: false,
@@ -32,7 +50,6 @@ const register = async (req, res) => {
             });
         }
 
-        // Email validation
         const emailRegex = /^\S+@\S+\.\S+$/;
 
         if (!emailRegex.test(email)) {
@@ -42,7 +59,6 @@ const register = async (req, res) => {
             });
         }
 
-        // Password validation
         const passwordRegex =
             /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#])[A-Za-z\d@$!%*?&^#]{8,}$/;
 
@@ -54,7 +70,6 @@ const register = async (req, res) => {
             });
         }
 
-        // Check existing user
         const existingUser = await User.findOne({
             email: email.toLowerCase(),
         });
@@ -66,10 +81,8 @@ const register = async (req, res) => {
             });
         }
 
-        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create user
         const user = await User.create({
             name,
             email: email.toLowerCase(),
@@ -268,7 +281,6 @@ const forgotPassword = async (req, res) => {
 
                             </div>
 
-
                             <!-- Content -->
                             <div style="
                                 padding:35px 30px;
@@ -353,7 +365,6 @@ const forgotPassword = async (req, res) => {
 
                             </div>
 
-
                             <!-- Footer -->
                             <div style="
                                 background:#fff7ed;
@@ -429,7 +440,6 @@ const verifyOTP = async (req, res) => {
             });
         }
 
-        // Check whether OTP exists
         if (
             !user.resetPasswordOTP ||
             !user.resetPasswordOTPExpires
@@ -440,7 +450,6 @@ const verifyOTP = async (req, res) => {
             });
         }
 
-        // Check expiry
         if (
             user.resetPasswordOTPExpires.getTime() <
             Date.now()
@@ -458,7 +467,6 @@ const verifyOTP = async (req, res) => {
             });
         }
 
-        // Compare OTP
         const isValidOTP = await bcrypt.compare(
             otp.toString(),
             user.resetPasswordOTP
@@ -471,7 +479,6 @@ const verifyOTP = async (req, res) => {
             });
         }
 
-        // OTP verified
         user.resetPasswordVerified = true;
 
         await user.save();
@@ -521,7 +528,6 @@ const resetPassword = async (req, res) => {
             });
         }
 
-        // Same password rules as registration
         const passwordRegex =
             /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#])[A-Za-z\d@$!%*?&^#]{8,}$/;
 
@@ -544,7 +550,6 @@ const resetPassword = async (req, res) => {
             });
         }
 
-        // Make sure OTP was verified
         if (!user.resetPasswordVerified) {
             return res.status(403).json({
                 success: false,
@@ -553,7 +558,6 @@ const resetPassword = async (req, res) => {
             });
         }
 
-        // Hash new password
         const hashedPassword = await bcrypt.hash(
             newPassword,
             10
@@ -561,7 +565,6 @@ const resetPassword = async (req, res) => {
 
         user.password = hashedPassword;
 
-        // Clear reset fields
         user.resetPasswordOTP = null;
         user.resetPasswordOTPExpires = null;
         user.resetPasswordVerified = false;
@@ -613,15 +616,12 @@ const resendOTP = async (req, res) => {
             });
         }
 
-        // Generate new OTP
         const otp = Math.floor(
             100000 + Math.random() * 900000
         ).toString();
 
-        // Hash OTP
         const hashedOTP = await bcrypt.hash(otp, 10);
 
-        // New expiry - 10 minutes
         const otpExpiry = new Date(
             Date.now() + 10 * 60 * 1000
         );
@@ -632,7 +632,6 @@ const resendOTP = async (req, res) => {
 
         await user.save();
 
-        // Send new OTP email
         await transporter.sendMail({
             from: `"Cook Book" <${process.env.EMAIL_USER}>`,
             to: user.email,
