@@ -200,6 +200,7 @@ const forgotPassword = async (req, res) => {
         const user = await User.findOne({
             email: normalizedEmail,
         });
+        console.log("FORGOT PASSWORD: User lookup completed");
 
         // Don't reveal whether an account exists
         if (!user) {
@@ -227,9 +228,13 @@ const forgotPassword = async (req, res) => {
         user.resetPasswordOTPExpires = otpExpiry;
         user.resetPasswordVerified = false;
 
+        console.log("FORGOT PASSWORD: Saving OTP...");
         await user.save();
+        console.log("FORGOT PASSWORD: OTP saved to database");
+
 
         // Send OTP email
+        console.log("FORGOT PASSWORD: Attempting to send email...");
         await transporter.sendMail({
             from: `"Cook Book" <${process.env.EMAIL_USER}>`,
             to: user.email,
@@ -397,6 +402,7 @@ const forgotPassword = async (req, res) => {
                 </div>
             `,
         });
+        console.log("FORGOT PASSWORD: Email sent successfully");
 
         res.status(200).json({
             success: true,
