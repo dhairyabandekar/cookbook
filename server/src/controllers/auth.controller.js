@@ -17,9 +17,11 @@ const transporter = nodemailer.createTransport({
         pass: process.env.EMAIL_PASS,
     },
 
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
+    family: 4,
+
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
 });
 
 // Temporary SMTP connection test
