@@ -5,7 +5,7 @@ import { activateFreePlan } from "../services/subscription.service";
 
 function Subscription() {
   const navigate = useNavigate();
-  const { user, refreshsubscription } = useContext(AuthContext);
+  const { user, refreshSubscription } = useContext(AuthContext);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
