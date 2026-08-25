@@ -52,6 +52,41 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    // Subscription
+    subscription: {
+      plan: {
+        type: String,
+        enum: ["read", "read_watch"],
+        default: null,
+      },
+
+      status: {
+        type: String,
+        enum: ["active", "expired", "cancelled"],
+        default: null,
+      },
+
+      startDate: {
+        type: Date,
+        default: null,
+      },
+
+      expiryDate: {
+        type: Date,
+        default: null,
+      },
+
+      paymentId: {
+        type: String,
+        default: null,
+      },
+
+      orderId: {
+        type: String,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,

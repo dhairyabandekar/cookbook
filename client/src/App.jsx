@@ -8,6 +8,7 @@ import Contact from "./pages/Contact";
 import ForgotPassword from "./pages/ForgotPassword";
 import VerifyOTP from "./pages/VerifyOTP";
 import ResetPassword from "./pages/ResetPassword";
+import Subscription from "./pages/Subscription";
 
 // Auth Pages
 import Login from "./pages/Login";
@@ -42,6 +43,9 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} /> 
         <Route path="/verify-otp" element={<VerifyOTP />} /> 
         <Route path="/reset-password" element={<ResetPassword />} /> 
+
+        {/* Subscription */}
+        <Route path="/subscription" element={<Subscription />} />
       </Routes>
     </>
   );

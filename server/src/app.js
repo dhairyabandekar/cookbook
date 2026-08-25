@@ -5,6 +5,7 @@ const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
 const adminRoutes = require("./routes/admin.routes");
 const recipeRoutes = require("./routes/recipe.routes");
+const subscriptionRoutes = require("./routes/subscription.routes");
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/recipes", recipeRoutes);
+app.use("/api/subscription", subscriptionRoutes);
 
 app.get("/", (req, res) => {
     res.json({
