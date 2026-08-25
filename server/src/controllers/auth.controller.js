@@ -1,13 +1,15 @@
 const User = require("../models/User.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { Resend } = require("resend");
+const { BrevoClient } = require("@getbrevo/brevo");
 
 // ======================================================
-// RESEND EMAIL CLIENT
+// BREVO EMAIL CLIENT
 // ======================================================
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const brevo = new BrevoClient({
+    apiKey: process.env.BREVO_API_KEY,
+});
 
 
 // ======================================================
@@ -73,6 +75,7 @@ const register = async (req, res) => {
                 email: user.email,
             },
         });
+
     } catch (error) {
         console.error("Register error:", error);
 
@@ -144,6 +147,7 @@ const login = async (req, res) => {
                 role: user.role,
             },
         });
+
     } catch (error) {
         console.error("Login error:", error);
 
@@ -170,7 +174,8 @@ const forgotPassword = async (req, res) => {
             });
         }
 
-        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedEmail =
+            email.toLowerCase().trim();
 
         const user = await User.findOne({
             email: normalizedEmail,
@@ -205,10 +210,8 @@ const forgotPassword = async (req, res) => {
         // HASH OTP
         // ==================================================
 
-        const hashedOTP = await bcrypt.hash(
-            otp,
-            10
-        );
+        const hashedOTP =
+            await bcrypt.hash(otp, 10);
 
         // ==================================================
         // OTP EXPIRY - 10 MINUTES
@@ -218,9 +221,14 @@ const forgotPassword = async (req, res) => {
             Date.now() + 10 * 60 * 1000
         );
 
-        user.resetPasswordOTP = hashedOTP;
-        user.resetPasswordOTPExpires = otpExpiry;
-        user.resetPasswordVerified = false;
+        user.resetPasswordOTP =
+            hashedOTP;
+
+        user.resetPasswordOTPExpires =
+            otpExpiry;
+
+        user.resetPasswordVerified =
+            false;
 
         console.log(
             "FORGOT PASSWORD: Saving OTP..."
@@ -233,24 +241,32 @@ const forgotPassword = async (req, res) => {
         );
 
         // ==================================================
-        // SEND OTP USING RESEND
+        // SEND OTP THROUGH BREVO
         // ==================================================
 
         console.log(
-            "FORGOT PASSWORD: Sending OTP through Resend..."
+            "FORGOT PASSWORD: Sending OTP through Brevo..."
         );
 
-        const { data, error } =
-            await resend.emails.send({
-                from:
-                    "Cook Book <onboarding@resend.dev>",
+        const result =
+            await brevo.transactionalEmails.sendTransacEmail({
 
-                to: [user.email],
+                sender: {
+                    name: "Cook Book",
+                    email: "dhairyabandekar@gmail.com",
+                },
+
+                to: [
+                    {
+                        email: user.email,
+                        name: user.name,
+                    },
+                ],
 
                 subject:
                     "Password Reset OTP — Cook Book 🍳",
 
-                html: `
+                htmlContent: `
                     <div style="
                         margin:0;
                         padding:0;
@@ -432,46 +448,13 @@ const forgotPassword = async (req, res) => {
                 `,
             });
 
-        // ==================================================
-        // CHECK RESEND ERROR
-        // ==================================================
-
-        if (error) {
-            console.error(
-                "❌ RESEND EMAIL ERROR:"
-            );
-
-            console.error(
-                "Message:",
-                error.message
-            );
-
-            console.error(
-                "Full Error:",
-                error
-            );
-
-            // Clear OTP if email wasn't sent
-            user.resetPasswordOTP = null;
-            user.resetPasswordOTPExpires = null;
-            user.resetPasswordVerified = false;
-
-            await user.save();
-
-            return res.status(500).json({
-                success: false,
-                message:
-                    "Failed to send OTP",
-            });
-        }
-
         console.log(
-            "✅ OTP email sent successfully through Resend"
+            "✅ OTP email sent successfully through Brevo"
         );
 
         console.log(
-            "Resend Email ID:",
-            data?.id
+            "Brevo Message ID:",
+            result.messageId
         );
 
         return res.status(200).json({
@@ -481,8 +464,9 @@ const forgotPassword = async (req, res) => {
         });
 
     } catch (error) {
+
         console.error(
-            "❌ Forgot password error:"
+            "❌ BREVO EMAIL ERROR"
         );
 
         console.error(
@@ -491,13 +475,19 @@ const forgotPassword = async (req, res) => {
         );
 
         console.error(
-            "Full Error:",
-            error
+            "Status Code:",
+            error.statusCode
+        );
+
+        console.error(
+            "Response:",
+            error.body
         );
 
         return res.status(500).json({
             success: false,
-            message: "Failed to send OTP",
+            message:
+                "Failed to send OTP",
         });
     }
 };
@@ -584,7 +574,8 @@ const verifyOTP = async (req, res) => {
         // OTP VERIFIED
         // ==================================================
 
-        user.resetPasswordVerified = true;
+        user.resetPasswordVerified =
+            true;
 
         await user.save();
 
@@ -595,6 +586,7 @@ const verifyOTP = async (req, res) => {
         });
 
     } catch (error) {
+
         console.error(
             "Verify OTP error:",
             error
@@ -615,6 +607,7 @@ const verifyOTP = async (req, res) => {
 
 const resetPassword = async (req, res) => {
     try {
+
         const {
             email,
             newPassword,
@@ -700,15 +693,21 @@ const resetPassword = async (req, res) => {
                 10
             );
 
-        user.password = hashedPassword;
+        user.password =
+            hashedPassword;
 
         // ==================================================
         // CLEAR PASSWORD RESET DATA
         // ==================================================
 
-        user.resetPasswordOTP = null;
-        user.resetPasswordOTPExpires = null;
-        user.resetPasswordVerified = false;
+        user.resetPasswordOTP =
+            null;
+
+        user.resetPasswordOTPExpires =
+            null;
+
+        user.resetPasswordVerified =
+            false;
 
         await user.save();
 
@@ -719,6 +718,7 @@ const resetPassword = async (req, res) => {
         });
 
     } catch (error) {
+
         console.error(
             "Reset password error:",
             error
@@ -739,6 +739,7 @@ const resetPassword = async (req, res) => {
 
 const resendOTP = async (req, res) => {
     try {
+
         const { email } = req.body;
 
         if (!email) {
@@ -788,10 +789,11 @@ const resendOTP = async (req, res) => {
         // EXPIRY - 10 MINUTES
         // ==================================================
 
-        const otpExpiry = new Date(
-            Date.now() +
-            10 * 60 * 1000
-        );
+        const otpExpiry =
+            new Date(
+                Date.now() +
+                10 * 60 * 1000
+            );
 
         user.resetPasswordOTP =
             hashedOTP;
@@ -809,24 +811,32 @@ const resendOTP = async (req, res) => {
         );
 
         // ==================================================
-        // SEND NEW OTP THROUGH RESEND
+        // SEND NEW OTP THROUGH BREVO
         // ==================================================
 
         console.log(
-            "RESEND OTP: Sending email through Resend..."
+            "RESEND OTP: Sending email through Brevo..."
         );
 
-        const { data, error } =
-            await resend.emails.send({
-                from:
-                    "Cook Book <onboarding@resend.dev>",
+        const result =
+            await brevo.transactionalEmails.sendTransacEmail({
 
-                to: [user.email],
+                sender: {
+                    name: "Cook Book",
+                    email: "dhairyabandekar@gmail.com",
+                },
+
+                to: [
+                    {
+                        email: user.email,
+                        name: user.name,
+                    },
+                ],
 
                 subject:
                     "Your New Password Reset OTP — Cook Book 🍳",
 
-                html: `
+                htmlContent: `
                     <div style="
                         font-family:Arial,Helvetica,sans-serif;
                         background:#fff7ed;
@@ -962,46 +972,13 @@ const resendOTP = async (req, res) => {
                 `,
             });
 
-        // ==================================================
-        // CHECK RESEND ERROR
-        // ==================================================
-
-        if (error) {
-            console.error(
-                "❌ RESEND OTP EMAIL ERROR:"
-            );
-
-            console.error(
-                "Message:",
-                error.message
-            );
-
-            console.error(
-                "Full Error:",
-                error
-            );
-
-            // Clear invalid OTP
-            user.resetPasswordOTP = null;
-            user.resetPasswordOTPExpires = null;
-            user.resetPasswordVerified = false;
-
-            await user.save();
-
-            return res.status(500).json({
-                success: false,
-                message:
-                    "Failed to resend OTP",
-            });
-        }
-
         console.log(
-            "✅ New OTP email sent successfully through Resend"
+            "✅ New OTP email sent successfully through Brevo"
         );
 
         console.log(
-            "Resend Email ID:",
-            data?.id
+            "Brevo Message ID:",
+            result.messageId
         );
 
         return res.status(200).json({
@@ -1011,9 +988,24 @@ const resendOTP = async (req, res) => {
         });
 
     } catch (error) {
+
         console.error(
-            "❌ Resend OTP error:",
-            error
+            "❌ BREVO RESEND OTP ERROR"
+        );
+
+        console.error(
+            "Message:",
+            error.message
+        );
+
+        console.error(
+            "Status Code:",
+            error.statusCode
+        );
+
+        console.error(
+            "Response:",
+            error.body
         );
 
         return res.status(500).json({
