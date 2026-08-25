@@ -1,28 +1,22 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getRecipeById } from "../services/recipe.service";
+import { AuthContext } from "../context/AuthContext";
 
 function RecipeDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const {
+    user,
+    hasReadAccess,
+    hasWatchAccess,
+    subscriptionLoading,
+  } = useContext(AuthContext);
+
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  // ======================================================
-  // TEMPORARY SUBSCRIPTION ACCESS
-  // ======================================================
-  // These will later come from the logged-in user's
-  // subscription returned by the backend.
-
-  const [hasReadAccess, setHasReadAccess] = useState(false);
-  const [hasWatchAccess, setHasWatchAccess] = useState(false);
-
-  // ======================================================
-  // SUBSCRIPTION POPUP
-  // ======================================================
-
   const [showSubscribePopup, setShowSubscribePopup] =
     useState(false);
 
@@ -101,6 +95,11 @@ function RecipeDetails() {
   // ======================================================
 
   const handleWatchRecipe = () => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
     if (!hasWatchAccess) {
       setShowSubscribePopup(true);
       return;
@@ -125,7 +124,7 @@ function RecipeDetails() {
   };
 
   // ======================================================
-  // STEPS
+  // RECIPE STEPS
   // ======================================================
 
   const steps = recipe.steps || [];
@@ -143,9 +142,7 @@ function RecipeDetails() {
 
       <div className="max-w-7xl mx-auto">
 
-        {/* ==================================================
-            BACK
-        ================================================== */}
+        {/* BACK */}
 
         <Link
           to="/recipes"
@@ -221,27 +218,28 @@ function RecipeDetails() {
             </p>
 
             {/* ==================================================
-                VIDEO + SUBSCRIBE BUTTONS
+                ACTION BUTTONS
             ================================================== */}
 
             <div className="flex flex-wrap gap-3 mt-8">
 
-              {/* WATCH */}
-
               {recipe.youtube && (
                 <button
                   onClick={handleWatchRecipe}
-                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition font-semibold"
+                  disabled={subscriptionLoading}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition font-semibold disabled:opacity-60"
                 >
                   ▶ Watch Full Recipe
                 </button>
               )}
 
-              {/* SUBSCRIBE */}
+              {/* SHOW SUBSCRIBE IF WATCH IS NOT AVAILABLE */}
 
               {!hasWatchAccess && (
                 <button
-                  onClick={() => setShowSubscribePopup(true)}
+                  onClick={() =>
+                    setShowSubscribePopup(true)
+                  }
                   className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg transition font-semibold"
                 >
                   ⭐ Subscribe Now
@@ -260,9 +258,7 @@ function RecipeDetails() {
 
         <div className="grid lg:grid-cols-2 gap-10 mt-14">
 
-          {/* ==================================================
-              INGREDIENTS
-          ================================================== */}
+          {/* INGREDIENTS */}
 
           <div>
 
@@ -306,7 +302,6 @@ function RecipeDetails() {
                   key={index}
                   className="bg-white p-4 rounded-lg shadow-sm"
                 >
-
                   <strong>
                     Step {index + 1}
                   </strong>
@@ -314,7 +309,6 @@ function RecipeDetails() {
                   <p className="mt-2 text-gray-700">
                     {step}
                   </p>
-
                 </li>
               ))}
 
@@ -327,8 +321,6 @@ function RecipeDetails() {
             {lockedSteps.length > 0 && (
               <div className="relative mt-4">
 
-                {/* BLURRED STEPS */}
-
                 <div className="space-y-4 max-h-80 overflow-hidden">
 
                   {lockedSteps.map(
@@ -337,7 +329,6 @@ function RecipeDetails() {
                         key={index}
                         className="bg-white p-4 rounded-lg shadow-sm blur-sm select-none"
                       >
-
                         <strong>
                           Step {index + 4}
                         </strong>
@@ -345,38 +336,34 @@ function RecipeDetails() {
                         <p className="mt-2">
                           {step}
                         </p>
-
                       </div>
                     )
                   )}
 
                 </div>
 
-                {/* GRADIENT */}
-
                 <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-orange-50 to-transparent pointer-events-none" />
 
               </div>
             )}
 
-            {/* ==================================================
-                READ MORE
-            ================================================== */}
+            {/* READ MORE */}
 
-            {!hasReadAccess && lockedSteps.length > 0 && (
-              <div className="text-center mt-6">
+            {!hasReadAccess &&
+              lockedSteps.length > 0 && (
+                <div className="text-center mt-6">
 
-                <button
-                  onClick={() =>
-                    setShowSubscribePopup(true)
-                  }
-                  className="text-orange-600 font-bold hover:text-orange-700 hover:underline"
-                >
-                  Read More →
-                </button>
+                  <button
+                    onClick={() =>
+                      setShowSubscribePopup(true)
+                    }
+                    className="text-orange-600 font-bold hover:text-orange-700 hover:underline"
+                  >
+                    Read More →
+                  </button>
 
-              </div>
-            )}
+                </div>
+              )}
 
           </div>
 
@@ -385,7 +372,7 @@ function RecipeDetails() {
       </div>
 
       {/* ======================================================
-          SUBSCRIPTION POPUP
+          SUBSCRIBE POPUP
       ====================================================== */}
 
       {showSubscribePopup && (
@@ -401,26 +388,18 @@ function RecipeDetails() {
             onClick={(e) => e.stopPropagation()}
           >
 
-            {/* ICON */}
-
             <div className="text-5xl mb-4">
               🔒
             </div>
-
-            {/* TITLE */}
 
             <h2 className="text-2xl font-bold text-gray-800">
               Subscribe to Continue
             </h2>
 
-            {/* MESSAGE */}
-
             <p className="text-gray-600 mt-4 leading-6">
               Subscribe to unlock the complete recipe
               and enjoy premium Cook Book features.
             </p>
-
-            {/* SUBSCRIBE */}
 
             <button
               onClick={handleSubscribe}
@@ -428,8 +407,6 @@ function RecipeDetails() {
             >
               Subscribe Now
             </button>
-
-            {/* CANCEL */}
 
             <button
               onClick={() =>

@@ -5,7 +5,7 @@ import { AuthContext } from "../context/AuthContext";
 import { FavoritesContext } from "../context/FavoritesContext";
 
 function RecipeCard({ recipe }) {
-  const { user } = useContext(AuthContext);
+  const { user, hasWatchAccess } = useContext(AuthContext);
 
   const {
     toggleFavorite,
@@ -13,17 +13,6 @@ function RecipeCard({ recipe }) {
   } = useContext(FavoritesContext);
 
   const navigate = useNavigate();
-
-  // ======================================================
-  // TEMPORARY SUBSCRIPTION ACCESS
-  // ======================================================
-
-  const [hasWatchAccess, setHasWatchAccess] =
-    useState(false);
-
-  // ======================================================
-  // SUBSCRIBE POPUP
-  // ======================================================
 
   const [showSubscribePopup, setShowSubscribePopup] =
     useState(false);
@@ -35,6 +24,11 @@ function RecipeCard({ recipe }) {
   const handleWatchRecipe = (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (!user) {
+      navigate("/login");
+      return;
+    }
 
     if (!hasWatchAccess) {
       setShowSubscribePopup(true);
@@ -66,12 +60,9 @@ function RecipeCard({ recipe }) {
   return (
     <>
       <Link to={`/recipe/${recipe.id}`}>
-
         <div className="relative bg-white rounded-xl shadow hover:shadow-lg hover:scale-105 transition duration-300 overflow-hidden cursor-pointer">
 
-          {/* ==================================================
-              FAVORITE
-          ================================================== */}
+          {/* FAVORITE */}
 
           {user && (
             <button
@@ -91,9 +82,7 @@ function RecipeCard({ recipe }) {
             </button>
           )}
 
-          {/* ==================================================
-              IMAGE
-          ================================================== */}
+          {/* IMAGE */}
 
           <img
             src={recipe.image}
@@ -101,9 +90,7 @@ function RecipeCard({ recipe }) {
             className="w-full h-52 object-cover"
           />
 
-          {/* ==================================================
-              CONTENT
-          ================================================== */}
+          {/* CONTENT */}
 
           <div className="p-4">
 
@@ -139,13 +126,11 @@ function RecipeCard({ recipe }) {
               ⭐ {recipe.difficulty}
             </p>
 
-            {/* ==================================================
-                ACTION BUTTONS
-            ================================================== */}
+            {/* ACTION BUTTONS */}
 
             <div className="flex flex-wrap gap-2 mt-4">
 
-              {/* WATCH RECIPE */}
+              {/* WATCH */}
 
               {recipe.youtube && (
                 <button
@@ -156,7 +141,7 @@ function RecipeCard({ recipe }) {
                 </button>
               )}
 
-              {/* SUBSCRIBE NOW */}
+              {/* SUBSCRIBE */}
 
               {!hasWatchAccess && (
                 <button
@@ -177,46 +162,34 @@ function RecipeCard({ recipe }) {
           </div>
 
         </div>
-
       </Link>
 
       {/* ======================================================
-          SUBSCRIPTION POPUP
+          SUBSCRIBE POPUP
       ====================================================== */}
 
       {showSubscribePopup && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-          onClick={() =>
-            setShowSubscribePopup(false)
-          }
+          onClick={() => setShowSubscribePopup(false)}
         >
-
           <div
             className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
             onClick={(e) => e.stopPropagation()}
           >
 
-            {/* ICON */}
-
             <div className="text-5xl mb-4">
               🔒
             </div>
-
-            {/* TITLE */}
 
             <h2 className="text-2xl font-bold text-gray-800">
               Subscribe to Watch Recipe
             </h2>
 
-            {/* DESCRIPTION */}
-
             <p className="text-gray-600 mt-4 leading-6">
               Subscribe to the Read + Watch plan to
               unlock video tutorials for all recipes.
             </p>
-
-            {/* SUBSCRIBE */}
 
             <button
               onClick={handleSubscribe}
@@ -224,8 +197,6 @@ function RecipeCard({ recipe }) {
             >
               Subscribe Now
             </button>
-
-            {/* CANCEL */}
 
             <button
               onClick={(e) => {
@@ -240,10 +211,8 @@ function RecipeCard({ recipe }) {
             </button>
 
           </div>
-
         </div>
       )}
-
     </>
   );
 }

@@ -5,7 +5,7 @@ import { activateFreePlan } from "../services/subscription.service";
 
 function Subscription() {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user, refreshsubscription } = useContext(AuthContext);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -27,6 +27,7 @@ const handleFreePlan = async () => {
         const response = await activateFreePlan();
 
         if (response.success) {
+            await refreshSubscription();
             navigate("/");
         }
     } catch (error) {
