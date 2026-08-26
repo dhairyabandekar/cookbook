@@ -86,6 +86,16 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: null,
       },
+
+      razorpayOrderId: {
+        type: String,
+        default: null,
+      },
+
+      razorpaySignature: {
+        type: String,
+        default: null,
+      },
     },
   },
   {
