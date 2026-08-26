@@ -9,6 +9,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyOTP from "./pages/VerifyOTP";
 import ResetPassword from "./pages/ResetPassword";
 import Subscription from "./pages/Subscription";
+import SubscriptionPayment from "./pages/SubscriptionPayment";
 
 // Auth Pages
 import Login from "./pages/Login";
@@ -46,6 +47,7 @@ function App() {
 
         {/* Subscription */}
         <Route path="/subscription" element={<Subscription />} />
+        <Route path="/subscription-payment" element={<SubscriptionPayment />} />
       </Routes>
     </>
   );

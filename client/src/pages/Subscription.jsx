@@ -2,6 +2,7 @@ import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { activateFreePlan } from "../services/subscription.service";
+import API from "../api/axios";
 
 function Subscription() {
   const navigate = useNavigate();
@@ -14,49 +15,81 @@ function Subscription() {
   // FREE PLAN
   // ======================================================
 
-const handleFreePlan = async () => {
-    if (!user) {
-        navigate("/login");
-        return;
-    }
-
-    try {
-        setLoading(true);
-        setError("");
-
-        const response = await activateFreePlan();
-
-        if (response.success) {
-            await refreshSubscription();
-            navigate("/");
-        }
-    } catch (error) {
-        console.error(
-            "Free subscription error:",
-            error
-        );
-
-        setError(
-            error.response?.data?.message ||
-                "Unable to activate free plan."
-        );
-    } finally {
-        setLoading(false);
-    }
-};
-
-  // ======================================================
-  // PAID PLAN
-  // ======================================================
-
-  const handlePaidPlan = () => {
+  const handleFreePlan = async () => {
     if (!user) {
       navigate("/login");
       return;
     }
 
-    // Payment page will be created next.
-    navigate("/checkout?plan=read_watch");
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await activateFreePlan();
+
+      if (response.success) {
+        await refreshSubscription();
+        navigate("/");
+      }
+    } catch (error) {
+      console.error(
+        "Free subscription error:",
+        error
+      );
+
+      setError(
+        error.response?.data?.message ||
+        "Unable to activate free plan."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ======================================================
+  // PAID PLAN
+  // ======================================================
+
+  const handlePaidPlan = async () => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await API.post(
+        "/subscription/order"
+      );
+
+      console.log(
+        "SUBSCRIPTION ORDER:",
+        response.data
+      );
+
+      if (response.data.success) {
+        navigate("/subscription-payment", {
+          state: {
+            order: response.data.order,
+          },
+        });
+      }
+
+    } catch (error) {
+      console.error(
+        "Subscription order error:",
+        error
+      );
+
+      setError(
+        error.response?.data?.message ||
+        "Unable to create subscription order."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -283,9 +316,12 @@ const handleFreePlan = async () => {
 
             <button
               onClick={handlePaidPlan}
-              className="w-full mt-8 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-semibold transition shadow-md"
+              disabled={loading}
+              className="w-full mt-8 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-semibold transition shadow-md disabled:opacity-60"
             >
-              Subscribe Now — ₹79
+              {loading
+                ? "Creating Order..."
+                : "Subscribe Now — ₹79"}
             </button>
 
           </div>
