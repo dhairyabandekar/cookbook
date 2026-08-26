@@ -197,6 +197,13 @@ const processSubscriptionPayment = async (
 
         const userId = req.user.id;
 
+        console.log("========== RAZORPAY PAYMENT DEBUG ==========");
+        console.log("Payment ID:", razorpay_payment_id);
+        console.log("Razorpay Order ID:", razorpay_order_id);
+        console.log("Signature:", razorpay_signature);
+        console.log("Subscription Order ID:", orderId);
+        console.log("============================================");
+
         // ==================================================
         // VALIDATE PAYMENT DATA
         // ==================================================
@@ -248,6 +255,12 @@ const processSubscriptionPayment = async (
                     `${razorpay_order_id}|${razorpay_payment_id}`
                 )
                 .digest("hex");
+
+        console.log("Generated Signature:", generatedSignature);
+        console.log(
+            "Signature Match:",
+            generatedSignature === razorpay_signature
+        );
 
         const isValid =
             generatedSignature ===
